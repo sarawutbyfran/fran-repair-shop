@@ -1,11 +1,15 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 
-// กำหนด path สำหรับเก็บฐานข้อมูล (ถ้าอยู่บน Render ให้ชี้ไปที่ Render Disk เช่น /data/database.sqlite)
-// ช่วงทดสอบบนเครื่องตัวเอง สามารถใช้ path ปกติได้ครับ
-const dbPath = process.env.RENDER_DISK_PATH 
-  ? path.join(process.env.RENDER_DISK_PATH, 'database.sqlite') 
-  : path.join(__dirname, 'database.sqlite');
+// ถ้าอยู่บน Render จะใช้ path จากตัวแปรแวดล้อม RENDER_DISK_PATH
+const diskPath = process.env.RENDER_DISK_PATH || path.join(__dirname, 'data');
+
+if (!fs.existsSync(diskPath)) {
+  fs.mkdirSync(diskPath, { recursive: true });
+}
+
+const dbPath = path.join(diskPath, 'database.sqlite');
 
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
@@ -18,7 +22,6 @@ const db = new sqlite3.Database(dbPath, (err) => {
 
 function createTables() {
   db.serialize(() => {
-    // 1. ตารางคลังอะไหล่กลาง (Master Parts)
     db.run(`CREATE TABLE IF NOT EXISTS parts_inventory (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       part_code TEXT,
@@ -27,7 +30,6 @@ function createTables() {
       unit_price REAL DEFAULT 0
     )`);
 
-    // 2. ตารางบิลซ่อมหลัก (Repairs)
     db.run(`CREATE TABLE IF NOT EXISTS repairs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       bill_no TEXT,
@@ -42,16 +44,6 @@ function createTables() {
       image_path TEXT,
       is_paid INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
-
-    // 3. ตารางรายการอะไหล่ในแต่ละบิล (Repair Items)
-    db.run(`CREATE TABLE IF NOT EXISTS repair_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      repair_id INTEGER,
-      item_name TEXT,
-      quantity INTEGER,
-      unit_price REAL,
-      FOREIGN KEY(repair_id) REFERENCES repairs(id)
     )`);
   });
 }
