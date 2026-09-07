@@ -129,21 +129,40 @@ function ArabicNumberToText(Number) {
   return text;
 }
 
+// คลังอะไหล่
 async function loadPartsDatabase() {
   const res = await fetch('/api/parts');
   globalPartsData = await res.json();
+  
+  const filterType = document.getElementById('filter_part_type')?.value;
+  let displayData = globalPartsData;
+  if (filterType) displayData = globalPartsData.filter(p => p.part_type === filterType);
+
   const tbody = document.getElementById('partsInventoryTable');
   if(tbody) {
     tbody.innerHTML = '';
-    globalPartsData.forEach(p => {
+    displayData.forEach(p => {
       const profit = (p.sale_price - p.cost_price).toFixed(2);
-      tbody.innerHTML += `<tr class="hover:bg-gray-50"><td class="p-2 border">${p.part_type || '-'}</td><td class="p-2 border font-bold">${p.part_name}</td><td class="p-2 border text-right text-red-600">${p.cost_price}</td><td class="p-2 border text-right text-green-600 font-bold">${p.sale_price}</td><td class="p-2 border text-right text-blue-600">${profit}</td><td class="p-2 border text-xs">${p.source || '-'}</td></tr>`;
+      tbody.innerHTML += `
+        <tr class="hover:bg-gray-50">
+          <td class="p-2 border">${p.part_type || '-'}</td>
+          <td class="p-2 border font-bold">${p.part_name}</td>
+          <td class="p-2 border text-right text-red-600">${p.cost_price}</td>
+          <td class="p-2 border text-right text-green-600 font-bold">${p.sale_price}</td>
+          <td class="p-2 border text-right text-blue-600">${profit}</td>
+          <td class="p-2 border text-xs">${p.source || '-'}</td>
+          <td class="p-2 border text-center">
+            <button onclick="editPart(${p.id}, '${p.part_type}', '${p.part_name}', ${p.cost_price}, ${p.sale_price}, '${p.source || ''}')" class="bg-yellow-400 px-2 py-1 rounded text-xs font-bold">แก้ไข</button>
+            <button onclick="deletePart(${p.id})" class="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">ลบ</button>
+          </td>
+        </tr>`;
     });
   }
 }
 
 document.getElementById('addPartForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const editId = document.getElementById('edit_part_id').value;
   const data = {
     part_type: document.getElementById('part_type').value,
     part_name: document.getElementById('part_name').value,
@@ -152,19 +171,69 @@ document.getElementById('addPartForm').addEventListener('submit', async (e) => {
     profit: parseFloat(document.getElementById('sale_price').value) - parseFloat(document.getElementById('cost_price').value),
     source: document.getElementById('part_source').value
   };
-  await fetch('/api/parts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-  document.getElementById('addPartForm').reset();
+
+  const method = editId ? 'PUT' : 'POST';
+  const url = editId ? `/api/parts/${editId}` : '/api/parts';
+
+  await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+  resetPartForm();
   await loadPartsDatabase();
-  alert('เพิ่มรายการอะไหล่สำเร็จ!');
+  
+  // อัปเดต Dropdown ในตารางบิลทันทีโดยไม่ต้องรีเฟรชหน้าเว็บ
+  refreshAllDropdowns();
+  alert('บันทึกข้อมูลอะไหล่สำเร็จ!');
 });
 
+function editPart(id, type, name, cost, sale, source) {
+  document.getElementById('edit_part_id').value = id;
+  document.getElementById('part_type').value = type;
+  document.getElementById('part_name').value = name;
+  document.getElementById('cost_price').value = cost;
+  document.getElementById('sale_price').value = sale;
+  document.getElementById('part_source').value = source;
+  document.getElementById('partSubmitBtn').innerText = "อัปเดต";
+}
+
+function resetPartForm() {
+  document.getElementById('addPartForm').reset();
+  document.getElementById('edit_part_id').value = '';
+  document.getElementById('partSubmitBtn').innerText = "บันทึก";
+}
+
+async function deletePart(id) {
+  if(confirm('ต้องการลบรายการนี้ใช่หรือไม่?')) {
+    await fetch(`/api/parts/${id}`, { method: 'DELETE' });
+    await loadPartsDatabase();
+    refreshAllDropdowns();
+  }
+}
+
+function refreshAllDropdowns() {
+  document.querySelectorAll('#itemsTable tr:not(#laborRow)').forEach(row => {
+    const typeSelect = row.querySelector('select:first-child');
+    if(typeSelect && typeSelect.value) filterPartsByType(typeSelect);
+  });
+}
+
+// ประวัติงานซ่อม พร้อมตัวกรองและยอดหนี้
 async function loadHistory() {
   const res = await fetch('/api/repairs');
   let data = await res.json();
+  
   const filterSender = document.getElementById('filter_sender')?.value;
   const filterStatus = document.getElementById('filter_status')?.value;
+  const filterPay = document.getElementById('filter_pay')?.value;
+  
   if (filterSender) data = data.filter(d => d.repair_sender === filterSender);
   if (filterStatus) data = data.filter(d => (d.status || 'กำลังซ่อม') === filterStatus);
+  if (filterPay !== "") data = data.filter(d => String(d.is_paid) === filterPay);
+
+  // คำนวณยอดรวมหนี้ตามตัวกรองปัจจุบัน
+  let totalDebt = 0;
+  data.forEach(item => {
+    totalDebt += parseFloat(item.grand_total || 0);
+  });
+  document.getElementById('debtSummary').innerText = totalDebt.toLocaleString('th-TH', {minimumFractionDigits: 2});
 
   const tbody = document.getElementById('historyTable');
   if(!tbody) return;
@@ -176,11 +245,13 @@ async function loadHistory() {
     let imagesHTML = item.image_path ? `<button onclick="downloadAllImages('${item.image_path}')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded border font-bold hover:bg-purple-200">โหลดรูป (${item.image_path.split(',').length})</button>` : '-';
     const currentStatus = item.status || 'กำลังซ่อม';
     let statusColor = currentStatus === 'ซ่อมเสร็จ' ? 'text-green-600' : (currentStatus === 'รออะไหล่' ? 'text-red-500' : 'text-orange-500');
+    const billTotal = parseFloat(item.grand_total || 0).toFixed(2);
 
     tr.innerHTML = `
       <td class="p-2 border font-bold text-cyan-700">${item.bill_no}<br><span class="text-xs text-gray-500">${item.date}</span></td>
       <td class="p-2 border">${item.customer_name}</td>
       <td class="p-2 border font-bold">${item.repair_sender || '-'}<br><span class="${statusColor} text-xs">${currentStatus}</span></td>
+      <td class="p-2 border text-right font-bold text-red-600">${billTotal}</td>
       <td class="p-2 border text-center">${imagesHTML}</td>
       <td class="p-2 border text-center">
         <button onclick="togglePay(${item.id}, ${item.is_paid ? 0 : 1})" class="px-2 py-1 rounded text-white text-xs font-bold ${item.is_paid ? 'bg-green-500' : 'bg-red-500'} shadow">
@@ -216,8 +287,29 @@ async function editRepair(id) {
   document.getElementById('repair_status').value = data.status || 'กำลังซ่อม';
   updateLaborDesc();
 
+  document.querySelectorAll('#itemsTable tr:not(#laborRow)').forEach(row => row.remove());
+
   if(data.items && data.items.length > 0) {
     document.querySelector('#laborRow .item-price').value = data.items[0].unit_price || 0;
+    
+    for(let i = 1; i < data.items.length; i++) {
+      addItemRow();
+      const rows = document.querySelectorAll('#itemsTable tr:not(#laborRow)');
+      const currentRow = rows[rows.length - 1];
+      const partName = data.items[i].item_name;
+      
+      const foundPart = globalPartsData.find(p => p.part_name === partName);
+      if(foundPart) {
+        const typeSelect = currentRow.querySelector('select:first-child');
+        typeSelect.value = foundPart.part_type;
+        filterPartsByType(typeSelect);
+        
+        const nameSelect = currentRow.querySelector('.item-name');
+        nameSelect.value = partName;
+      }
+      currentRow.querySelector('.item-qty').value = data.items[i].quantity;
+      currentRow.querySelector('.item-price').value = data.items[i].unit_price;
+    }
   }
   calculateTotal();
 

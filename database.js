@@ -2,6 +2,7 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
+// ตรวจสอบเส้นทาง Render Disk ถ้าไม่มีให้ใช้โฟลเดอร์ data ท้องถิ่น
 const diskPath = process.env.RENDER_DISK_PATH || path.join(__dirname, 'data');
 if (!fs.existsSync(diskPath)) {
   fs.mkdirSync(diskPath, { recursive: true });
@@ -11,8 +12,8 @@ const dbPath = path.join(diskPath, 'database.sqlite');
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) console.error('Error opening database', err.message);
   else {
+    console.log('Database connected at:', dbPath);
     db.serialize(() => {
-      // ตารางคลังอะไหล่
       db.run(`CREATE TABLE IF NOT EXISTS parts_inventory (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         part_type TEXT,
@@ -23,7 +24,6 @@ const db = new sqlite3.Database(dbPath, (err) => {
         source TEXT
       )`);
       
-      // ตารางบิลซ่อมหลัก (เพิ่ม status และรองรับการแก้ไข)
       db.run(`CREATE TABLE IF NOT EXISTS repairs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         bill_no TEXT,
@@ -41,7 +41,6 @@ const db = new sqlite3.Database(dbPath, (err) => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`);
 
-      // ตารางรายการอะไหล่ในบิล
       db.run(`CREATE TABLE IF NOT EXISTS repair_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         repair_id INTEGER,

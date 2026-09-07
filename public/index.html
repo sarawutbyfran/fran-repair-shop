@@ -19,7 +19,6 @@
       
       <div id="billArea" class="bg-white p-4 border-2 border-cyan-400 rounded-lg relative pb-6">
         
-        <!-- หัวบิลและโลโก้ -->
         <div class="flex justify-between items-center mb-4 border-b-2 border-cyan-200 pb-3">
           <div class="flex items-center gap-3">
             <img src="logo.png" alt="Logo" class="h-14 w-14 object-contain rounded border" onerror="this.style.display='none'">
@@ -33,35 +32,43 @@
           </div>
         </div>
 
-        <!-- ข้อมูลลูกค้าและเลขอัตโนมัติ -->
+        <!-- 1. ปรับสัดส่วนช่องลูกค้าให้สั้นลง และขยายช่องเลขที่บิลให้แสดงผลบรรทัดเดียว -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 text-sm">
-          <div class="md:col-span-2 border border-cyan-300 p-3 rounded space-y-2 bg-white">
+          <div class="md:col-span-1 border border-cyan-300 p-3 rounded space-y-2 bg-white">
             <div class="flex items-center gap-2"><label class="font-bold w-16">ชื่อลูกค้า:</label> <input type="text" id="customer_name" class="flex-1 border p-1 rounded outline-none" required></div>
             <div class="flex items-center gap-2"><label class="font-bold w-16">ที่อยู่:</label> <input type="text" id="customer_address" class="flex-1 border p-1 rounded outline-none"></div>
           </div>
-          <div class="border border-cyan-300 p-3 rounded space-y-2 bg-white">
-            <div class="flex items-center gap-2"><label class="font-bold w-20">เลขที่ / No.:</label> <input type="text" id="bill_no" class="flex-1 border p-1 rounded bg-gray-50 text-red-600 font-bold" readonly></div>
-            <div class="flex items-center gap-2"><label class="font-bold w-20">วันที่ / Date:</label> <input type="text" id="date_display" class="flex-1 border p-1 rounded bg-gray-50" readonly></div>
-            <input type="hidden" id="date" name="date">
+          
+          <div class="md:col-span-2 border border-cyan-300 p-3 rounded space-y-2 bg-white flex flex-col justify-between">
+            <div class="grid grid-cols-2 gap-2">
+              <div class="flex items-center gap-1"><label class="font-bold text-xs whitespace-nowrap">เลขที่/No.:</label> <input type="text" id="bill_no" class="w-full border p-1 rounded bg-gray-50 text-red-600 font-bold text-xs" readonly></div>
+              <div class="flex items-center gap-1"><label class="font-bold text-xs whitespace-nowrap">วันที่/Date:</label> <input type="text" id="date_display" class="w-full border p-1 rounded bg-gray-50 text-xs" readonly></div>
+              <input type="hidden" id="date" name="date">
+            </div>
+            
+            <!-- 3. เพิ่มช่องสรุปรายการซ่อม (Class ยี่ห้อ กำลัง อาการ) ใต้เลขที่บิล -->
+            <div class="bg-yellow-50 border border-yellow-200 p-1.5 rounded text-xs">
+              <span class="font-bold text-amber-800">สรุปงานซ่อม:</span> 
+              <span id="bill_summary_text" class="text-blue-900 font-semibold">-</span>
+            </div>
           </div>
         </div>
 
         <div class="flex flex-col md:flex-row gap-4 mb-4">
-          <!-- ตารางรายการ -->
           <div class="flex-1">
             <table class="w-full text-sm print-border">
               <thead>
                 <tr class="bg-cyan-50">
+                  <!-- 2. ปรับหัวข้อตารางให้เป็นกึ่งกลางทั้งหมด -->
                   <th class="p-1.5 w-10 text-center">ลำดับ</th>
-                  <th class="p-1.5 text-left">รายการ (Descriptions)</th>
+                  <th class="p-1.5 text-center">รายการ (Descriptions)</th>
                   <th class="p-1.5 w-16 text-center">จำนวน</th>
-                  <th class="p-1.5 w-20 text-right">หน่วยละ</th>
-                  <th class="p-1.5 w-24 text-right">จำนวนเงิน</th>
+                  <th class="p-1.5 w-20 text-center">หน่วยละ</th>
+                  <th class="p-1.5 w-24 text-center">จำนวนเงิน</th>
                   <th class="p-1.5 w-8 text-center hide-on-print">ลบ</th>
                 </tr>
               </thead>
               <tbody id="itemsTable">
-                <!-- บรรทัดแรก (ค่าแรง/อาการอัตโนมัติ) -->
                 <tr id="laborRow">
                   <td class="p-1.5 text-center font-bold row-num">1</td>
                   <td class="p-1.5"><input type="text" id="labor_desc" class="w-full p-1 bg-yellow-50 font-bold text-blue-800 outline-none" readonly></td>
@@ -83,15 +90,11 @@
             <button type="button" id="btnAddItem" onclick="addItemRow()" class="mt-2 bg-blue-500 text-white px-3 py-1 rounded text-xs shadow hide-on-print">+ เพิ่มรายการอะไหล่</button>
           </div>
 
-          <!-- ข้อมูลงานซ่อม (หลังบ้าน) -->
           <div id="sideBox" class="w-full md:w-60 bg-orange-50 p-3 rounded border border-orange-300 text-xs h-fit hide-on-print space-y-2">
             <h3 class="font-extrabold text-orange-900 text-center border-b border-orange-200 pb-1">ข้อมูลงานซ่อม (หลังบ้าน)</h3>
-            
             <div class="flex flex-col"><span class="font-bold">สถานะงาน:</span> 
               <select id="repair_status" class="border p-1 rounded font-bold bg-white text-red-600">
-                <option value="กำลังซ่อม">กำลังซ่อม</option>
-                <option value="รออะไหล่">รออะไหล่</option>
-                <option value="ซ่อมเสร็จ">ซ่อมเสร็จ</option>
+                <option value="กำลังซ่อม">กำลังซ่อม</option><option value="รออะไหล่">รออะไหล่</option><option value="ซ่อมเสร็จ">ซ่อมเสร็จ</option>
               </select>
             </div>
             <div class="flex flex-col"><span class="font-bold">ส่งงาน:</span> 
@@ -117,7 +120,6 @@
           </div>
         </div>
 
-        <!-- แนบรูปหลายรูป -->
         <div id="uploadBox" class="flex justify-between items-center bg-gray-50 p-2 border border-gray-300 rounded text-sm hide-on-print">
           <span class="font-bold">แนบรูปภาพงานซ่อม (เลือกได้หลายรูป):</span>
           <input type="file" id="repair_images" accept="image/*" multiple class="text-xs">
@@ -131,20 +133,27 @@
       </div>
     </form>
 
-    <!-- ประวัติงานซ่อมและตัวกรอง -->
+    <!-- ประวัติงานซ่อม -->
     <div class="bg-white p-6 rounded-lg shadow-md border border-gray-300">
       <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
-        <h2 class="text-xl font-bold text-blue-800">ประวัติงานซ่อม / เช็คสถานะ</h2>
+        <div>
+          <h2 class="text-xl font-bold text-blue-800">ประวัติงานซ่อม / เช็คสถานะ</h2>
+          <p class="text-sm font-bold text-red-600 mt-1">ยอดรวมค้างชำระตามตัวกรอง: <span id="debtSummary">0.00</span> บาท</p>
+        </div>
         <div class="flex gap-2 text-sm">
           <select id="filter_sender" class="border border-blue-300 p-1 rounded bg-blue-50" onchange="loadHistory()">
-            <option value="">- ผู้ส่งงาน (ทั้งหมด) -</option>
-            <option value="หน้าร้าน">หน้าร้าน</option><option value="พี่พล">พี่พล</option>
-            <option value="พี่โจ้">พี่โจ้</option><option value="พี่แมน">พี่แมน</option>
-            <option value="พี่โอม">พี่โอม</option><option value="พี่นพ">พี่นพ</option>
+            <option value="">- ผู้ส่งงานทั้งหมด -</option>
+            <option value="หน้าร้าน">หน้าร้าน</option><option value="พี่พล">พี่พล</option><option value="พี่โจ้">พี่โจ้</option>
+            <option value="พี่แมน">พี่แมน</option><option value="พี่โอม">พี่โอม</option><option value="พี่นพ">พี่นพ</option>
           </select>
           <select id="filter_status" class="border border-blue-300 p-1 rounded bg-blue-50" onchange="loadHistory()">
-            <option value="">- สถานะ (ทั้งหมด) -</option>
+            <option value="">- สถานะงานทั้งหมด -</option>
             <option value="กำลังซ่อม">กำลังซ่อม</option><option value="รออะไหล่">รออะไหล่</option><option value="ซ่อมเสร็จ">ซ่อมเสร็จ</option>
+          </select>
+          <select id="filter_pay" class="border border-blue-300 p-1 rounded bg-blue-50 font-bold text-red-600" onchange="loadHistory()">
+            <option value="0" selected>✕ ค้างชำระ</option>
+            <option value="1">✓ จ่ายแล้ว</option>
+            <option value="">- ทั้งหมด -</option>
           </select>
         </div>
       </div>
@@ -154,7 +163,7 @@
           <thead>
             <tr class="bg-blue-50 border-b">
               <th class="p-2 border">เลขที่บิล</th><th class="p-2 border">ลูกค้า</th><th class="p-2 border">ผู้ส่ง/สถานะ</th>
-              <th class="p-2 border text-center">รูปถ่าย</th><th class="p-2 border text-center">สถานะเงิน</th><th class="p-2 border text-center">จัดการ</th>
+              <th class="p-2 border text-right">ยอดรวมเงิน</th><th class="p-2 border text-center">รูปถ่าย</th><th class="p-2 border text-center">สถานะเงิน</th><th class="p-2 border text-center">จัดการ</th>
             </tr>
           </thead>
           <tbody id="historyTable"></tbody>
@@ -165,14 +174,15 @@
     <!-- ระบบหลังบ้าน คลังอะไหล่ -->
     <div class="bg-white p-6 rounded-lg shadow-md border border-gray-300">
       <h2 class="text-xl font-bold mb-4 text-orange-800">ระบบหลังบ้าน: จัดการคลังอะไหล่</h2>
-      <form id="addPartForm" class="grid grid-cols-2 md:grid-cols-6 gap-2 mb-4 bg-orange-50 p-3 border border-orange-200 rounded text-xs">
+      
+      <form id="addPartForm" class="grid grid-cols-2 md:grid-cols-7 gap-2 mb-4 bg-orange-50 p-3 border border-orange-200 rounded text-xs">
+        <input type="hidden" id="edit_part_id" value="">
         <div>
           <label class="font-bold">ชนิดอุปกรณ์</label>
           <select id="part_type" class="w-full border p-1 rounded bg-white" required>
             <option value="">- เลือกชนิด -</option>
-            <option value="IC">IC</option><option value="MOSFET">MOSFET</option>
-            <option value="Transistor">Transistor</option><option value="Resistor">Resistor</option>
-            <option value="Capacitor">Capacitor</option><option value="Diode">Diode</option>
+            <option value="IC">IC</option><option value="MOSFET">MOSFET</option><option value="Transistor">Transistor</option>
+            <option value="Resistor">Resistor</option><option value="Capacitor">Capacitor</option><option value="Diode">Diode</option>
             <option value="Module/Board">Module/Board</option><option value="อื่นๆ">อื่นๆ</option>
           </select>
         </div>
@@ -180,15 +190,28 @@
         <div><label class="font-bold">ราคาทุน</label><input type="number" id="cost_price" class="w-full border p-1 rounded bg-white" value="0"></div>
         <div><label class="font-bold">ราคาขาย</label><input type="number" id="sale_price" class="w-full border p-1 rounded bg-white" value="0"></div>
         <div><label class="font-bold">แหล่งซื้อ</label><input type="text" id="part_source" class="w-full border p-1 rounded bg-white"></div>
-        <div class="flex items-end"><button type="submit" class="w-full bg-orange-600 text-white font-bold py-1 rounded hover:bg-orange-700 shadow">บันทึกคลัง</button></div>
+        <div class="flex items-end gap-1">
+          <button type="submit" id="partSubmitBtn" class="w-full bg-orange-600 text-white font-bold py-1 rounded hover:bg-orange-700 shadow">บันทึก</button>
+          <button type="button" onclick="resetPartForm()" class="bg-gray-400 text-white px-2 py-1 rounded">ยกเลิก</button>
+        </div>
       </form>
+
+      <div class="mb-3 flex items-center gap-2">
+        <span class="text-xs font-bold">กรองดูตามชนิด:</span>
+        <select id="filter_part_type" class="border p-1 rounded text-xs bg-gray-50" onchange="loadPartsDatabase()">
+          <option value="">- ทุกชนิดอุปกรณ์ -</option>
+          <option value="IC">IC</option><option value="MOSFET">MOSFET</option><option value="Transistor">Transistor</option>
+          <option value="Resistor">Resistor</option><option value="Capacitor">Capacitor</option><option value="Diode">Diode</option>
+          <option value="Module/Board">Module/Board</option><option value="อื่นๆ">อื่นๆ</option>
+        </select>
+      </div>
 
       <div class="overflow-x-auto h-56 overflow-y-auto">
         <table class="w-full text-left text-sm border-collapse border border-gray-200">
           <thead class="bg-gray-100 sticky top-0">
             <tr>
               <th class="p-2 border">ชนิด</th><th class="p-2 border">รายการ</th><th class="p-2 border text-right">ทุน</th>
-              <th class="p-2 border text-right">ขาย</th><th class="p-2 border text-right">กำไร</th><th class="p-2 border">แหล่งซื้อ</th>
+              <th class="p-2 border text-right">ขาย</th><th class="p-2 border text-right">กำไร</th><th class="p-2 border">แหล่งซื้อ</th><th class="p-2 border text-center">จัดการ</th>
             </tr>
           </thead>
           <tbody id="partsInventoryTable"></tbody>
@@ -198,321 +221,16 @@
 
   </div>
 
-  <script>
-    let globalPartsData = [];
-
-    document.addEventListener('DOMContentLoaded', async () => {
-      setupInitialData();
-      await loadPartsDatabase();
-      loadHistory();
-      addItemRow();
-    });
-
-    function setupInitialData() {
-      const now = new Date();
-      const year = now.getFullYear().toString().slice(-2);
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      const randomNo = Math.floor(1000 + Math.random() * 9000);
-      document.getElementById('bill_no').value = `F-${year}${month}${day}-${randomNo}`;
-      document.getElementById('date_display').value = `${day}/${month}/${now.getFullYear()}`;
-      document.getElementById('date').value = now.toISOString().split('T')[0];
-      updateLaborDesc();
-    }
-
-    function updateLaborDesc() {
-      const ampClass = document.getElementById('amp_class').value;
-      const brand = document.getElementById('amp_brand').value;
-      const power = document.getElementById('amp_power').value;
-      const symptom = document.getElementById('symptom').value;
-      let desc = "รายการซ่อม";
-      if (ampClass) desc += ` ${ampClass}`;
-      if (brand) desc += ` ${brand}`;
-      if (power) desc += ` ${power} W`;
-      if (symptom) desc += ` อาการ${symptom}`;
-      document.getElementById('labor_desc').value = desc;
-    }
-
-    function addItemRow() {
-      const tbody = document.getElementById('itemsTable');
-      const tr = document.createElement('tr');
-      
-      const uniqueTypes = [...new Set(globalPartsData.map(p => p.part_type).filter(t => t))];
-      let typeOptions = `<option value="">- เลือกชนิด -</option>`;
-      uniqueTypes.forEach(t => { typeOptions += `<option value="${t}">${t}</option>`; });
-
-      tr.innerHTML = `
-        <td class="p-1.5 text-center font-bold row-num"></td>
-        <td class="p-1.5 flex gap-1">
-          <select class="w-1/3 p-1 border rounded bg-white text-xs" onchange="filterPartsByType(this)">
-            ${typeOptions}
-          </select>
-          <select class="item-name w-2/3 p-1 border rounded bg-white text-xs" onchange="autoFillPrice(this)">
-            <option value="">- เลือกรายการ -</option>
-          </select>
-        </td>
-        <td class="p-1.5"><input type="number" class="item-qty w-full p-1 text-center border rounded" value="1" oninput="calculateTotal()"></td>
-        <td class="p-1.5"><input type="number" class="item-price w-full p-1 text-right border rounded" value="0" oninput="calculateTotal()"></td>
-        <td class="p-1.5 text-right item-total font-bold text-gray-700">0.00</td>
-        <td class="p-1.5 text-center hide-on-print"><button type="button" class="text-red-500 font-bold hover:text-red-700" onclick="deleteRow(this)">X</button></td>
-      `;
-      tbody.appendChild(tr);
-      updateRowNumbers();
-    }
-
-    function updateRowNumbers() {
-      const rows = document.querySelectorAll('#itemsTable tr');
-      rows.forEach((row, index) => {
-        const numTd = row.querySelector('.row-num');
-        if (numTd) numTd.innerText = index + 1;
-      });
-    }
-
-    function deleteRow(btn) {
-      btn.closest('tr').remove();
-      updateRowNumbers();
-      calculateTotal();
-    }
-
-    function filterPartsByType(typeSelect) {
-      const selectedType = typeSelect.value;
-      const nameSelect = typeSelect.nextElementSibling;
-      const filteredParts = globalPartsData.filter(p => p.part_type === selectedType);
-      let nameOptions = `<option value="">- เลือกรายการ -</option>`;
-      filteredParts.forEach(p => {
-        nameOptions += `<option value="${p.part_name}" data-price="${p.sale_price}">${p.part_name}</option>`;
-      });
-      nameSelect.innerHTML = nameOptions;
-      nameSelect.value = "";
-      autoFillPrice(nameSelect);
-    }
-
-    function autoFillPrice(selectElem) {
-      const selectedOption = selectElem.options[selectElem.selectedIndex];
-      const priceInput = selectElem.closest('tr').querySelector('.item-price');
-      priceInput.value = (selectedOption && selectedOption.value !== "") ? selectedOption.getAttribute('data-price') : 0;
-      calculateTotal();
-    }
-
-    function calculateTotal() {
-      let grandTotal = 0;
-      document.querySelectorAll('#itemsTable tr').forEach(row => {
-        const qty = parseFloat(row.querySelector('.item-qty')?.value || 0);
-        const price = parseFloat(row.querySelector('.item-price')?.value || 0);
-        const total = qty * price;
-        const totalElem = row.querySelector('.item-total');
-        if(totalElem) totalElem.innerText = total.toFixed(2);
-        grandTotal += total;
-      });
-      document.getElementById('grand_total').innerText = grandTotal.toFixed(2);
-      document.getElementById('total_text_thai').innerText = `( ${ArabicNumberToText(grandTotal)} )`;
-    }
-
-    function ArabicNumberToText(Number) {
-      let NumberStr = Number.toFixed(2).toString();
-      let text = "", unit = ["", "สิบ", "ร้อย", "พัน", "หมื่น", "แสน", "ล้าน"], numStr = ["ศูนย์", "หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก", "เจ็ด", "แปด", "เก้า"];
-      let splitParts = NumberStr.split('.'), baht = splitParts[0], satang = splitParts[1];
-      function convertProcess(str) {
-        let result = "", len = str.length;
-        for (let i = 0; i < len; i++) {
-          let n = parseInt(str.charAt(i)), position = len - i - 1;
-          if (n !== 0) {
-            if (position === 1 && n === 1) result += "สิบ";
-            else if (position === 1 && n === 2) result += "ยี่สิบ";
-            else if (position === 0 && n === 1 && len > 1 && str.charAt(len-2) !== '0') result += "เอ็ด";
-            else result += numStr[n] + unit[position];
-          }
-        }
-        return result;
-      }
-      if (baht === "0") text += "ศูนย์บาท"; else text += convertProcess(baht) + "บาท";
-      if (satang === "00") text += "ถ้วน"; else text += convertProcess(satang) + "สตางค์";
-      return text;
-    }
-
-    async function loadPartsDatabase() {
-      const res = await fetch('/api/parts');
-      globalPartsData = await res.json();
-      const tbody = document.getElementById('partsInventoryTable');
-      if(tbody) {
-        tbody.innerHTML = '';
-        globalPartsData.forEach(p => {
-          const profit = (p.sale_price - p.cost_price).toFixed(2);
-          tbody.innerHTML += `<tr class="hover:bg-gray-50"><td class="p-2 border">${p.part_type || '-'}</td><td class="p-2 border font-bold">${p.part_name}</td><td class="p-2 border text-right text-red-600">${p.cost_price}</td><td class="p-2 border text-right text-green-600 font-bold">${p.sale_price}</td><td class="p-2 border text-right text-blue-600">${profit}</td><td class="p-2 border text-xs">${p.source || '-'}</td></tr>`;
-        });
-      }
-    }
-
-    document.getElementById('addPartForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const data = {
-        part_type: document.getElementById('part_type').value,
-        part_name: document.getElementById('part_name').value,
-        cost_price: parseFloat(document.getElementById('cost_price').value || 0),
-        sale_price: parseFloat(document.getElementById('sale_price').value || 0),
-        profit: parseFloat(document.getElementById('sale_price').value) - parseFloat(document.getElementById('cost_price').value),
-        source: document.getElementById('part_source').value
-      };
-      await fetch('/api/parts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-      document.getElementById('addPartForm').reset();
-      await loadPartsDatabase();
-      alert('เพิ่มรายการอะไหล่สำเร็จ!');
-    });
-
-    async function loadHistory() {
-      const res = await fetch('/api/repairs');
-      let data = await res.json();
-      const filterSender = document.getElementById('filter_sender')?.value;
-      const filterStatus = document.getElementById('filter_status')?.value;
-      if (filterSender) data = data.filter(d => d.repair_sender === filterSender);
-      if (filterStatus) data = data.filter(d => (d.status || 'กำลังซ่อม') === filterStatus);
-
-      const tbody = document.getElementById('historyTable');
-      if(!tbody) return;
-      tbody.innerHTML = '';
-
-      data.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-gray-50";
-        let imagesHTML = item.image_path ? `<button onclick="downloadAllImages('${item.image_path}')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded border font-bold hover:bg-purple-200">โหลดรูป (${item.image_path.split(',').length})</button>` : '-';
-        const currentStatus = item.status || 'กำลังซ่อม';
-        let statusColor = currentStatus === 'ซ่อมเสร็จ' ? 'text-green-600' : (currentStatus === 'รออะไหล่' ? 'text-red-500' : 'text-orange-500');
-
-        tr.innerHTML = `
-          <td class="p-2 border font-bold text-cyan-700">${item.bill_no}<br><span class="text-xs text-gray-500">${item.date}</span></td>
-          <td class="p-2 border">${item.customer_name}</td>
-          <td class="p-2 border font-bold">${item.repair_sender || '-'}<br><span class="${statusColor} text-xs">${currentStatus}</span></td>
-          <td class="p-2 border text-center">${imagesHTML}</td>
-          <td class="p-2 border text-center">
-            <button onclick="togglePay(${item.id}, ${item.is_paid ? 0 : 1})" class="px-2 py-1 rounded text-white text-xs font-bold ${item.is_paid ? 'bg-green-500' : 'bg-red-500'} shadow">
-              ${item.is_paid ? '✓ จ่ายแล้ว' : '✕ ค้างชำระ'}
-            </button>
-          </td>
-          <td class="p-2 border text-center">
-            <button onclick="editRepair(${item.id})" class="px-2 py-1 bg-yellow-400 text-yellow-900 rounded text-xs font-bold hover:bg-yellow-500 shadow">แก้ไขบิล</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    async function togglePay(id, status) {
-      await fetch(`/api/repairs/${id}/pay`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_paid: status }) });
-      loadHistory();
-    }
-
-    async function editRepair(id) {
-      const res = await fetch(`/api/repairs/${id}`);
-      const data = await res.json();
-      document.getElementById('edit_repair_id').value = data.id;
-      document.getElementById('bill_no').value = data.bill_no;
-      document.getElementById('date_display').value = data.date;
-      document.getElementById('customer_name').value = data.customer_name;
-      document.getElementById('customer_address').value = data.customer_address;
-      document.getElementById('repair_sender').value = data.repair_sender;
-      document.getElementById('amp_class').value = data.amp_class;
-      document.getElementById('amp_brand').value = data.amp_brand;
-      document.getElementById('amp_power').value = data.amp_power;
-      document.getElementById('symptom').value = data.symptom;
-      document.getElementById('repair_status').value = data.status || 'กำลังซ่อม';
-      updateLaborDesc();
-
-      if(data.items && data.items.length > 0) {
-        document.getElementById('labor_price').value = data.items[0].unit_price || 0;
-      }
-
-      alert(`ดึงข้อมูลบิล ${data.bill_no} มาแก้ไขเรียบร้อยแล้ว`);
-      window.scrollTo(0, 0);
-      const submitBtn = document.querySelector('button[type="submit"]');
-      submitBtn.innerText = "อัปเดตบิลซ่อม";
-      submitBtn.classList.replace('bg-green-600', 'bg-blue-600');
-    }
-
-    function resetForm() {
-      document.getElementById('repairForm').reset();
-      document.getElementById('edit_repair_id').value = '';
-      setupInitialData();
-      document.querySelectorAll('#itemsTable tr:not(#laborRow)').forEach(row => row.remove());
-      addItemRow();
-      const submitBtn = document.querySelector('button[type="submit"]');
-      submitBtn.innerText = "บันทึกบิล";
-      submitBtn.classList.replace('bg-blue-600', 'bg-green-600');
-    }
-
-    function downloadAllImages(imagePathsStr) {
-      imagePathsStr.split(',').forEach((path, index) => {
-        setTimeout(() => {
-          const link = document.createElement('a');
-          link.href = path;
-          link.download = `repair-img-${index + 1}.png`;
-          link.target = '_blank';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }, index * 400);
-      });
-    }
-
-    document.getElementById('repairForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const formData = new FormData();
-      const editId = document.getElementById('edit_repair_id').value;
-      
-      formData.append('bill_no', document.getElementById('bill_no').value);
-      formData.append('date', document.getElementById('date').value);
-      formData.append('customer_name', document.getElementById('customer_name').value);
-      formData.append('customer_address', document.getElementById('customer_address').value);
-      formData.append('repair_sender', document.getElementById('repair_sender').value);
-      formData.append('amp_class', document.getElementById('amp_class').value);
-      formData.append('amp_brand', document.getElementById('amp_brand').value);
-      formData.append('amp_power', document.getElementById('amp_power').value);
-      formData.append('symptom', document.getElementById('symptom').value);
-      formData.append('status', document.getElementById('repair_status').value);
-
-      const imageInput = document.getElementById('repair_images');
-      for (let i = 0; i < imageInput.files.length; i++) {
-        formData.append('repair_images', imageInput.files[i]);
-      }
-
-      const items = [];
-      items.push({
-        name: document.getElementById('labor_desc').value,
-        qty: 1,
-        price: document.querySelector('#laborRow .item-price').value || 0
-      });
-
-      document.querySelectorAll('#itemsTable tr:not(#laborRow)').forEach(row => {
-        const selectElem = row.querySelector('.item-name');
-        const name = selectElem?.options[selectElem.selectedIndex]?.value;
-        const qty = row.querySelector('.item-qty')?.value;
-        const price = row.querySelector('.item-price')?.value;
-        if (name) items.push({ name, qty, price });
-      });
-      formData.append('items', JSON.stringify(items));
-
-      const method = editId ? 'PUT' : 'POST';
-      const url = editId ? `/api/repairs/${editId}` : '/api/repairs';
-
-      const res = await fetch(url, { method: method, body: formData });
-      if (res.ok) {
-        alert(editId ? 'อัปเดตบิลสำเร็จ!' : 'บันทึกบิลสำเร็จ!');
-        resetForm();
-        loadHistory();
-      }
-    });
-
-    function downloadBillImage() {
-      const elementsToHide = document.querySelectorAll('.hide-on-print');
-      elementsToHide.forEach(el => el.style.display = 'none');
-      html2canvas(document.getElementById('billArea'), { scale: 2 }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = `Bill-${document.getElementById('bill_no').value}.png`;
-        link.href = canvas.toDataURL("image/png");
-        link.click();
-        elementsToHide.forEach(el => el.style.display = '');
-      });
-    }
-  </script>
   <script src="script.js"></script>
+  <script>
+    // เพิ่มเติมสคริปต์อัปเดตช่องสรุปงานซ่อมใต้เลขที่บิล
+    const originalUpdateLaborDesc = window.updateLaborDesc;
+    window.updateLaborDesc = function() {
+      if (typeof originalUpdateLaborDesc === 'function') originalUpdateLaborDesc();
+      const desc = document.getElementById('labor_desc').value;
+      const summaryElem = document.getElementById('bill_summary_text');
+      if (summaryElem) summaryElem.innerText = desc.replace('รายการซ่อม ', '');
+    };
+  </script>
 </body>
 </html>

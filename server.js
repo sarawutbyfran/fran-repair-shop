@@ -22,7 +22,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// API: จัดการคลังอะไหล่
+// API คลังอะไหล่ (เพิ่ม PUT และ DELETE)
 app.get('/api/parts', (req, res) => {
   db.all("SELECT * FROM parts_inventory", [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -39,15 +39,35 @@ app.post('/api/parts', (req, res) => {
   });
 });
 
-// API: ดึงประวัติบิลทั้งหมด
+app.put('/api/parts/:id', (req, res) => {
+  const { part_type, part_name, cost_price, sale_price, profit, source } = req.body;
+  db.run(`UPDATE parts_inventory SET part_type=?, part_name=?, cost_price=?, sale_price=?, profit=?, source=? WHERE id=?`,
+    [part_type, part_name, cost_price, sale_price, profit, source, req.params.id], function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true });
+  });
+});
+
+app.delete('/api/parts/:id', (req, res) => {
+  db.run(`DELETE FROM parts_inventory WHERE id=?`, [req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+// API ประวัติบิล พร้อมดึงยอดรวมเงินแต่ละบิลมาแสดง
 app.get('/api/repairs', (req, res) => {
-  db.all("SELECT * FROM repairs ORDER BY id DESC", [], (err, rows) => {
+  const query = `
+    SELECT r.*, 
+    (SELECT SUM(quantity * unit_price) FROM repair_items WHERE repair_id = r.id) as grand_total 
+    FROM repairs r ORDER BY r.id DESC
+  `;
+  db.all(query, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
 });
 
-// API: ดึงบิลเดี่ยวเพื่อนำมาแก้ไข
 app.get('/api/repairs/:id', (req, res) => {
   db.get("SELECT * FROM repairs WHERE id = ?", [req.params.id], (err, repair) => {
     if (err || !repair) return res.status(404).json({ error: 'Not found' });
@@ -57,7 +77,6 @@ app.get('/api/repairs/:id', (req, res) => {
   });
 });
 
-// API: สร้างบิลใหม่ (รองรับหลายรูป)
 app.post('/api/repairs', upload.array('repair_images', 10), (req, res) => {
   try {
     const { bill_no, date, customer_name, customer_address, repair_sender, amp_class, amp_brand, amp_power, symptom, status, items } = req.body;
@@ -81,7 +100,6 @@ app.post('/api/repairs', upload.array('repair_images', 10), (req, res) => {
   }
 });
 
-// API: อัปเดตบิลเดิม (แก้ไขข้อมูลและเพิ่มรูปภาพสะสม)
 app.put('/api/repairs/:id', upload.array('repair_images', 10), (req, res) => {
   const id = req.params.id;
   const { customer_name, customer_address, repair_sender, amp_class, amp_brand, amp_power, symptom, status, items } = req.body;
@@ -110,7 +128,6 @@ app.put('/api/repairs/:id', upload.array('repair_images', 10), (req, res) => {
   });
 });
 
-// API: สลับสถานะการจ่ายเงิน
 app.patch('/api/repairs/:id/pay', (req, res) => {
   const { is_paid } = req.body;
   db.run(`UPDATE repairs SET is_paid = ? WHERE id = ?`, [is_paid, req.params.id], function(err) {
