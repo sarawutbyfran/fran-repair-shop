@@ -133,7 +133,6 @@ function ArabicNumberToText(Number) {
 async function loadPartsDatabase() {
   const res = await fetch('/api/parts');
   globalPartsData = await res.json();
-  
   const filterType = document.getElementById('filter_part_type')?.value;
   let displayData = globalPartsData;
   if (filterType) displayData = globalPartsData.filter(p => p.part_type === filterType);
@@ -171,15 +170,11 @@ document.getElementById('addPartForm').addEventListener('submit', async (e) => {
     profit: parseFloat(document.getElementById('sale_price').value) - parseFloat(document.getElementById('cost_price').value),
     source: document.getElementById('part_source').value
   };
-
   const method = editId ? 'PUT' : 'POST';
   const url = editId ? `/api/parts/${editId}` : '/api/parts';
-
   await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
   resetPartForm();
   await loadPartsDatabase();
-  
-  // อัปเดต Dropdown ในตารางบิลทันทีโดยไม่ต้องรีเฟรชหน้าเว็บ
   refreshAllDropdowns();
   alert('บันทึกข้อมูลอะไหล่สำเร็จ!');
 });
@@ -215,7 +210,7 @@ function refreshAllDropdowns() {
   });
 }
 
-// ประวัติงานซ่อม พร้อมตัวกรองและยอดหนี้
+// ประวัติงานซ่อม
 async function loadHistory() {
   const res = await fetch('/api/repairs');
   let data = await res.json();
@@ -228,11 +223,8 @@ async function loadHistory() {
   if (filterStatus) data = data.filter(d => (d.status || 'กำลังซ่อม') === filterStatus);
   if (filterPay !== "") data = data.filter(d => String(d.is_paid) === filterPay);
 
-  // คำนวณยอดรวมหนี้ตามตัวกรองปัจจุบัน
   let totalDebt = 0;
-  data.forEach(item => {
-    totalDebt += parseFloat(item.grand_total || 0);
-  });
+  data.forEach(item => { totalDebt += parseFloat(item.grand_total || 0); });
   document.getElementById('debtSummary').innerText = totalDebt.toLocaleString('th-TH', {minimumFractionDigits: 2});
 
   const tbody = document.getElementById('historyTable');
@@ -242,13 +234,27 @@ async function loadHistory() {
   data.forEach(item => {
     const tr = document.createElement('tr');
     tr.className = "hover:bg-gray-50";
-    let imagesHTML = item.image_path ? `<button onclick="downloadAllImages('${item.image_path}')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded border font-bold hover:bg-purple-200">โหลดรูป (${item.image_path.split(',').length})</button>` : '-';
+    
+    // ปุ่มเปิด Modal ดูรูปภาพ
+    let imagesHTML = item.image_path ? `<button onclick="openImageModal('${item.image_path}')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded border font-bold hover:bg-purple-200">ดูรูป (${item.image_path.split(',').length})</button>` : '-';
+    
     const currentStatus = item.status || 'กำลังซ่อม';
     let statusColor = currentStatus === 'ซ่อมเสร็จ' ? 'text-green-600' : (currentStatus === 'รออะไหล่' ? 'text-red-500' : 'text-orange-500');
     const billTotal = parseFloat(item.grand_total || 0).toFixed(2);
+    
+    // สร้างข้อความสรุปงานซ่อม (Class ยี่ห้อ กำลัง อาการ) ไว้ใต้เลขบิล
+    let summaryText = "แอมป์";
+    if(item.amp_class) summaryText += ` ${item.amp_class}`;
+    if(item.amp_brand) summaryText += ` ${item.amp_brand}`;
+    if(item.amp_power) summaryText += ` ${item.amp_power}W`;
+    if(item.symptom) summaryText += ` อาการ${item.symptom}`;
 
     tr.innerHTML = `
-      <td class="p-2 border font-bold text-cyan-700">${item.bill_no}<br><span class="text-xs text-gray-500">${item.date}</span></td>
+      <td class="p-2 border font-bold text-cyan-700">
+        ${item.bill_no}<br>
+        <span class="text-xs text-gray-500">${item.date}</span><br>
+        <span class="text-xs text-blue-900 font-semibold">🔧 ${summaryText}</span>
+      </td>
       <td class="p-2 border">${item.customer_name}</td>
       <td class="p-2 border font-bold">${item.repair_sender || '-'}<br><span class="${statusColor} text-xs">${currentStatus}</span></td>
       <td class="p-2 border text-right font-bold text-red-600">${billTotal}</td>
@@ -264,6 +270,27 @@ async function loadHistory() {
     `;
     tbody.appendChild(tr);
   });
+}
+
+// 7. จัดการ Modal แสดงรูปภาพและดาวน์โหลดแยกรูป
+function openImageModal(imagePathsStr) {
+  const container = document.getElementById('modalImagesContainer');
+  container.innerHTML = '';
+  const paths = imagePathsStr.split(',');
+  
+  paths.forEach((path, index) => {
+    container.innerHTML += `
+      <div class="border rounded p-2 flex flex-col items-center bg-gray-50 shadow-sm">
+        <img src="${path}" class="h-32 object-contain mb-2 rounded border bg-white" alt="Repair Image">
+        <a href="${path}" download="repair-photo-${index+1}.png" target="_blank" class="bg-blue-600 text-white text-xs px-3 py-1 rounded font-bold hover:bg-blue-700 shadow w-full text-center">📥 โหลดรูปลงเครื่อง</a>
+      </div>
+    `;
+  });
+  document.getElementById('imageModal').classList.remove('hidden');
+}
+
+function closeImageModal() {
+  document.getElementById('imageModal').classList.add('hidden');
 }
 
 async function togglePay(id, status) {
@@ -326,22 +353,51 @@ function resetForm() {
   setupInitialData();
   document.querySelectorAll('#itemsTable tr:not(#laborRow)').forEach(row => row.remove());
   addItemRow();
+  document.getElementById('fileCount').innerText = 'ยังไม่ได้เลือกรูป';
   const submitBtn = document.querySelector('button[type="submit"]');
   submitBtn.innerText = "บันทึกบิล";
   submitBtn.classList.replace('bg-blue-600', 'bg-green-600');
 }
 
-function downloadAllImages(imagePathsStr) {
-  imagePathsStr.split(',').forEach((path, index) => {
-    setTimeout(() => {
+// 6. แก้ไขฟังก์ชันดาวน์โหลดบิลภาพให้รองรับ iOS (Safari)
+function downloadBillImage() {
+  const elementsToHide = document.querySelectorAll('.hide-on-print');
+  elementsToHide.forEach(el => el.style.display = 'none');
+  
+  html2canvas(document.getElementById('billArea'), { scale: 2, useCORS: true }).then(canvas => {
+    elementsToHide.forEach(el => el.style.display = '');
+    
+    // แปลง Canvas เป็น Data URL
+    const imageURL = canvas.toDataURL("image/png");
+
+    // ตรวจสอบว่าเป็น iOS (iPhone/iPad) หรือไม่
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+    if (isIOS) {
+      // สำหรับ iOS จะเปิดรูปในหน้าต่างใหม่เพื่อให้ผู้ใช้กดค้างแล้วเลือก "บันทึกรูปภาพ" ได้ทันที
+      const newWindow = window.open();
+      if (newWindow) {
+        newWindow.document.write(`
+          <html>
+            <head><title>ดาวน์โหลดบิล</title></head>
+            <body style="text-align:center;background:#333;margin:0;padding:20px;">
+              <p style="color:white;font-family:sans-serif;font-size:16px;">กดค้างที่รูปภาพด้านล่าง แล้วเลือก "บันทึกรูปภาพ" (Add to Photos)</p>
+              <img src="${imageURL}" style="max-width:100%;height:auto;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,0.5);"/>
+            </body>
+          </html>
+        `);
+      } else {
+        alert('กรุณาอนุญาต Pop-up บนเบราว์เซอร์เพื่อดาวน์โหลดรูปภาพ');
+      }
+    } else {
+      // สำหรับ PC และ Android ใช้ระบบดาวน์โหลดปกติ
       const link = document.createElement('a');
-      link.href = path;
-      link.download = `repair-img-${index + 1}.png`;
-      link.target = '_blank';
+      link.download = `Bill-${document.getElementById('bill_no').value}.png`;
+      link.href = imageURL;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    }, index * 400);
+    }
   });
 }
 
@@ -392,15 +448,3 @@ document.getElementById('repairForm').addEventListener('submit', async (e) => {
     loadHistory();
   }
 });
-
-function downloadBillImage() {
-  const elementsToHide = document.querySelectorAll('.hide-on-print');
-  elementsToHide.forEach(el => el.style.display = 'none');
-  html2canvas(document.getElementById('billArea'), { scale: 2 }).then(canvas => {
-    const link = document.createElement('a');
-    link.download = `Bill-${document.getElementById('bill_no').value}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-    elementsToHide.forEach(el => el.style.display = '');
-  });
-}
