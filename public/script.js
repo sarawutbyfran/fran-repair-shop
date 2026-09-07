@@ -5,10 +5,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadPartsDatabase();
   loadHistory();
   addItemRow();
-  
-  // ซ่อนกล่องข้อมูลหลังบ้าน (ตั้งค่าบิล) ไว้เป็นค่าเริ่มต้นตามที่คุณต้องการ
-  const sideBoxContent = document.getElementById('sideBoxContent');
-  if(sideBoxContent) sideBoxContent.style.display = 'none';
 });
 
 function setupInitialData() {
@@ -133,7 +129,7 @@ function ArabicNumberToText(Number) {
   return text;
 }
 
-// ----------------- คลังอะไหล่ (ดึงข้อมูลจาก Disk) -----------------
+// คลังอะไหล่
 async function loadPartsDatabase() {
   try {
     const res = await fetch('/api/parts');
@@ -218,7 +214,7 @@ function refreshAllDropdowns() {
   });
 }
 
-// ----------------- ประวัติงานซ่อม (ดึงข้อมูลจาก Disk) -----------------
+// ประวัติงานซ่อม
 async function loadHistory() {
   try {
     const res = await fetch('/api/repairs');
@@ -287,7 +283,6 @@ function openImageModal(imagePathsStr) {
   const container = document.getElementById('modalImagesContainer');
   container.innerHTML = '';
   const paths = imagePathsStr.split(',');
-  
   paths.forEach((path, index) => {
     container.innerHTML += `
       <div class="border rounded p-2 flex flex-col items-center bg-gray-50 shadow-sm">
@@ -312,7 +307,6 @@ async function editRepair(id) {
   const res = await fetch(`/api/repairs/${id}`);
   const data = await res.json();
   
-  // สลับกลับมาหน้าทำบิลอัตโนมัติเมื่อกดแก้ไข
   switchTab('billTab');
 
   document.getElementById('edit_repair_id').value = data.id;
@@ -421,33 +415,46 @@ document.getElementById('repairForm').addEventListener('submit', async (e) => {
   }
 });
 
+// ฟังก์ชันดาวน์โหลดภาพบิล ล็อคขนาดความกว้าง 800px และแปลงฟอร์มให้แสดงผลชัดเจน
+// ฟังก์ชันดาวน์โหลดภาพบิล รองรับมือถือทั้ง iOS และ Android บันทึกลงเครื่องทันที
 function downloadBillImage() {
-  const elementsToHide = document.querySelectorAll('.hide-on-print');
-  elementsToHide.forEach(el => el.style.display = 'none');
+  const billArea = document.getElementById('billArea');
   
-  html2canvas(document.getElementById('billArea'), { scale: 2, useCORS: true }).then(canvas => {
-    elementsToHide.forEach(el => el.style.display = '');
-    const imageURL = canvas.toDataURL("image/png");
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  // เพิ่มคลาสล็อคขนาด 800px ชั่วคราวเพื่อให้รูปสวยคมชัด
+  billArea.classList.add('capturing-canvas');
 
-    if (isIOS) {
-      const newWindow = window.open();
-      if (newWindow) {
-        newWindow.document.write(`
-          <html>
-            <head><title>ดาวน์โหลดบิล</title></head>
-            <body style="text-align:center;background:#333;margin:0;padding:20px;">
-              <p style="color:white;font-family:sans-serif;font-size:16px;">กดค้างที่รูปภาพด้านล่าง แล้วเลือก "บันทึกรูปภาพ"</p>
-              <img src="${imageURL}" style="max-width:100%;height:auto;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,0.5);"/>
-            </body>
-          </html>
-        `);
-      } else {
-        alert('กรุณาอนุญาต Pop-up บนเบราว์เซอร์');
-      }
-    } else {
+  // ซ่อนปุ่มลบตอนแคปเจอร์
+  const deleteBtns = billArea.querySelectorAll('.hide-on-print');
+  deleteBtns.forEach(el => el.style.display = 'none');
+
+  html2canvas(billArea, { scale: 2, useCORS: true, logging: false }).then(canvas => {
+    // คืนค่าเดิม
+    billArea.classList.remove('capturing-canvas');
+    deleteBtns.forEach(el => el.style.display = '');
+
+    const imageURL = canvas.toDataURL("image/png");
+    const billNo = document.getElementById('bill_no').value || 'repair';
+
+    // ตรวจสอบว่าเป็นอุปกรณ์มือถือ (iOS หรือ Android) หรือไม่
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      // สำหรับมือถือ: สร้าง Tag <a> บังคับดาวน์โหลดตรงๆ โดยไม่ต้องเปิดหน้าต่าง Pop-up
       const link = document.createElement('a');
-      link.download = `Bill-${document.getElementById('bill_no').value}.png`;
+      link.href = imageURL;
+      link.download = `Bill-${billNo}.png`;
+      
+      // เพิ่มเข้าไปในหน้าเว็บชั่วคราวแล้วสั่งคลิกอัตโนมัติ
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // แจ้งเตือนเพื่อให้ผู้ใช้ทราบวิธีดูรูปในมือถือ
+      alert('บันทึกรูปภาพสำเร็จ! หากใช้ iPhone สามารถตรวจสอบรูปได้ในแอปรูปภาพ (Photos) หรือแอปไฟล์ (Files)');
+    } else {
+      // สำหรับคอมพิวเตอร์ (PC)
+      const link = document.createElement('a');
+      link.download = `Bill-${billNo}.png`;
       link.href = imageURL;
       document.body.appendChild(link);
       link.click();

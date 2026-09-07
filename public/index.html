@@ -8,19 +8,26 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     .print-border td, .print-border th { border-color: #22d3ee; border-width: 1px; border-style: solid; }
+    /* ล็อคขนาดความกว้างบิลตอนดาวน์โหลดรูปให้คงที่ตายตัว */
+    .capturing-canvas {
+      width: 800px !important;
+      max-width: none !important;
+      background: white !important;
+      padding: 20px !important;
+    }
   </style>
 </head>
 <body class="bg-gray-100 p-2 md:p-6 font-sans">
   <div class="max-w-5xl mx-auto space-y-4">
     
-    <!-- เมนูบาร์สำหรับสลับหน้าจอ -->
+    <!-- เมนูบาร์ -->
     <div class="bg-white p-3 rounded-lg shadow-md flex gap-2 border border-gray-300">
       <button onclick="switchTab('billTab')" id="btn-billTab" class="flex-1 py-2 px-4 rounded font-bold text-sm bg-cyan-600 text-white shadow">📝 หน้าทำบิล</button>
       <button onclick="switchTab('historyTab')" id="btn-historyTab" class="flex-1 py-2 px-4 rounded font-bold text-sm bg-gray-200 text-gray-700 hover:bg-gray-300">📋 ประวัติงานซ่อม</button>
       <button onclick="switchTab('inventoryTab')" id="btn-inventoryTab" class="flex-1 py-2 px-4 rounded font-bold text-sm bg-gray-200 text-gray-700 hover:bg-gray-300">⚙️ ระบบหลังบ้าน (คลัง)</button>
     </div>
 
-    <!-- ================= 1. หน้าทำบิล ================= -->
+    <!-- 1. หน้าทำบิล -->
     <div id="tab-billTab" class="tab-content">
       <form id="repairForm" class="bg-white p-4 md:p-6 rounded-lg shadow-md border border-gray-300 space-y-4">
         <input type="hidden" id="edit_repair_id" value="">
@@ -40,7 +47,6 @@
             </div>
           </div>
 
-          <!-- จัดช่องข้อมูลลูกค้าและเลขอัตโนมัติให้กระชับ ไม่เหลือพื้นที่ว่าง -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div class="border border-cyan-300 p-3 rounded space-y-2 bg-white">
               <div class="flex items-center gap-2"><label class="font-bold w-16 text-xs">ชื่อลูกค้า:</label> <input type="text" id="customer_name" class="flex-1 border p-1 rounded outline-none text-xs" required></div>
@@ -58,14 +64,14 @@
             </div>
           </div>
 
-          <!-- ข้อมูลงานซ่อม (ย้ายมาอยู่หน้าทำบิลแบบซ่อน/กางได้ ไม่เกะกะ) -->
-          <div class="bg-orange-50 p-3 rounded border border-orange-300 text-xs space-y-2">
+          <!-- ข้อมูลงานซ่อม (หลังบ้าน) -->
+          <div class="bg-orange-50 p-3 rounded border border-orange-300 text-xs space-y-2 hide-on-print">
             <div class="flex justify-between items-center border-b border-orange-200 pb-1">
               <h3 class="font-extrabold text-orange-900">ข้อมูลงานซ่อม (ตั้งค่าบิล)</h3>
-              <button type="button" onclick="toggleSideBox()" id="toggleBoxBtn" class="text-blue-600 font-bold underline">ซ่อน/ย่อ</button>
+              <button type="button" onclick="toggleSideBox()" id="toggleBoxBtn" class="text-blue-600 font-bold underline">แสดงข้อมูล</button>
             </div>
             
-            <div id="sideBoxContent" class="grid grid-cols-2 md:grid-cols-5 gap-2 pt-1">
+            <div id="sideBoxContent" class="grid grid-cols-2 md:grid-cols-5 gap-2 pt-1" style="display: none;">
               <div class="flex flex-col"><span class="font-bold">สถานะงาน:</span> 
                 <select id="repair_status" class="border p-1 rounded font-bold bg-white text-red-600 text-xs">
                   <option value="กำลังซ่อม">กำลังซ่อม</option><option value="รออะไหล่">รออะไหล่</option><option value="ซ่อมเสร็จ">ซ่อมเสร็จ</option>
@@ -145,7 +151,7 @@
       </form>
     </div>
 
-    <!-- ================= 2. หน้าประวัติงานซ่อม ================= -->
+    <!-- 2. หน้าประวัติ -->
     <div id="tab-historyTab" class="tab-content hidden">
       <div class="bg-white p-6 rounded-lg shadow-md border border-gray-300 space-y-4">
         <div class="flex flex-col md:flex-row justify-between items-center gap-2">
@@ -190,7 +196,7 @@
       </div>
     </div>
 
-    <!-- ================= 3. หน้าระบบหลังบ้าน คลังอะไหล่ ================= -->
+    <!-- 3. ระบบหลังบ้าน -->
     <div id="tab-inventoryTab" class="tab-content hidden">
       <div class="bg-white p-6 rounded-lg shadow-md border border-gray-300 space-y-4">
         <h2 class="text-xl font-bold text-orange-800">ระบบหลังบ้าน: จัดการคลังอะไหล่</h2>
@@ -242,7 +248,7 @@
 
   </div>
 
-  <!-- Modal สำหรับดูและเลือกดาวน์โหลดรูปภาพ -->
+  <!-- Modal รูปภาพ -->
   <div id="imageModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden flex justify-center items-center p-4">
     <div class="bg-white rounded-lg max-w-2xl w-full p-4 space-y-4">
       <div class="flex justify-between items-center border-b pb-2">
@@ -255,7 +261,6 @@
 
   <script src="script.js"></script>
   <script>
-    // ฟังก์ชันสลับหน้าต่างเมนู
     function switchTab(tabId) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
       document.getElementById(`tab-${tabId}`).classList.remove('hidden');

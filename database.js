@@ -2,17 +2,18 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
-// ตรวจสอบเส้นทาง Render Disk ถ้าไม่มีให้ใช้โฟลเดอร์ data ท้องถิ่น
+// ตรวจสอบพาท Render Disk อย่างรัดกุม
 const diskPath = process.env.RENDER_DISK_PATH || path.join(__dirname, 'data');
 if (!fs.existsSync(diskPath)) {
   fs.mkdirSync(diskPath, { recursive: true });
 }
 
 const dbPath = path.join(diskPath, 'database.sqlite');
+console.log("=== DATABASE PATH:", dbPath, " ===");
+
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) console.error('Error opening database', err.message);
   else {
-    console.log('Database connected at:', dbPath);
     db.serialize(() => {
       db.run(`CREATE TABLE IF NOT EXISTS parts_inventory (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
