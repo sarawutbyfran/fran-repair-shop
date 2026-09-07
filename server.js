@@ -68,5 +68,23 @@ app.get('/api/repairs', (req, res) => {
     res.json(rows);
   });
 });
+// API: เพิ่มรายการอะไหล่เข้าระบบหลังบ้าน
+app.post('/api/parts', (req, res) => {
+  const { part_type, part_name, cost_price, sale_price, profit, source } = req.body;
+  db.run(`INSERT INTO parts_inventory (part_type, part_name, cost_price, sale_price, profit, source) VALUES (?, ?, ?, ?, ?, ?)`,
+    [part_type, part_name, cost_price, sale_price, profit, source], function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true, id: this.lastID });
+  });
+});
+
+// API: อัปเดตสถานะการจ่ายเงิน
+app.patch('/api/repairs/:id/pay', (req, res) => {
+  const { is_paid } = req.body;
+  db.run(`UPDATE repairs SET is_paid = ? WHERE id = ?`, [is_paid, req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
 
 app.listen(process.env.PORT || 10000, '0.0.0.0', () => console.log('Server is running'));

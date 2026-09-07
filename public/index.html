@@ -98,6 +98,57 @@
     <!-- Datalist สำหรับโหลดชื่ออะไหล่จากฐานข้อมูลมาเป็น Auto-complete -->
     <datalist id="partsList"></datalist>
 
+    <!-- ================= ส่วนที่ 2: ประวัติงานซ่อม ================= -->
+    <div class="bg-white p-6 rounded-lg shadow-md border border-gray-300">
+      <h2 class="text-xl font-bold mb-4 text-blue-800">ประวัติงานซ่อม / เช็คสถานะชำระเงิน</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm border-collapse">
+          <thead>
+            <tr class="bg-blue-50 border-b">
+              <th class="p-2 border">เลขที่บิล</th>
+              <th class="p-2 border">วันที่</th>
+              <th class="p-2 border">ลูกค้า</th>
+              <th class="p-2 border">อาการ</th>
+              <th class="p-2 border text-center">รูปถ่าย</th>
+              <th class="p-2 border text-center">สถานะเงิน</th>
+            </tr>
+          </thead>
+          <tbody id="historyTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ================= ส่วนที่ 3: ระบบหลังบ้าน (คลังอะไหล่) ================= -->
+    <div class="bg-white p-6 rounded-lg shadow-md border border-gray-300">
+      <h2 class="text-xl font-bold mb-4 text-orange-800">ระบบหลังบ้าน: จัดการคลังอะไหล่</h2>
+      
+      <!-- ฟอร์มเพิ่มอะไหล่ -->
+      <form id="addPartForm" class="grid grid-cols-2 md:grid-cols-6 gap-2 mb-4 bg-orange-50 p-3 border border-orange-200 rounded">
+        <div><label class="text-xs font-bold">ชนิด</label><input type="text" id="part_type" class="w-full border p-1 rounded" placeholder="เช่น IC"></div>
+        <div><label class="text-xs font-bold">รายการ</label><input type="text" id="part_name" class="w-full border p-1 rounded" placeholder="เช่น IRS2092" required></div>
+        <div><label class="text-xs font-bold">ราคาทุน</label><input type="number" id="cost_price" class="w-full border p-1 rounded" value="0"></div>
+        <div><label class="text-xs font-bold">ราคาขาย</label><input type="number" id="sale_price" class="w-full border p-1 rounded" value="0"></div>
+        <div><label class="text-xs font-bold">แหล่งซื้อ</label><input type="text" id="part_source" class="w-full border p-1 rounded"></div>
+        <div class="flex items-end"><button type="submit" class="w-full bg-orange-600 text-white font-bold py-1 rounded hover:bg-orange-700">บันทึก</button></div>
+      </form>
+
+      <!-- ตารางอะไหล่ในคลัง -->
+      <div class="overflow-x-auto h-64 overflow-y-auto">
+        <table class="w-full text-left text-sm border-collapse border border-gray-200">
+          <thead class="bg-gray-100 sticky top-0">
+            <tr>
+              <th class="p-2 border">ชนิด</th>
+              <th class="p-2 border">รายการ</th>
+              <th class="p-2 border text-right">ทุน</th>
+              <th class="p-2 border text-right">ขาย</th>
+              <th class="p-2 border text-right">กำไร</th>
+              <th class="p-2 border">แหล่งซื้อ</th>
+            </tr>
+          </thead>
+          <tbody id="partsInventoryTable"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
   <script src="script.js"></script>
 </body>
