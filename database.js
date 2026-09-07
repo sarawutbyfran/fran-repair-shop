@@ -2,13 +2,24 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
-// ตรวจสอบพาท Render Disk อย่างรัดกุม
-const diskPath = process.env.RENDER_DISK_PATH || path.join(__dirname, 'data');
+// กำหนดพาทให้วิ่งตรงไปที่ Render Disk (/data) โดยตรง
+const diskPath = process.env.RENDER_DISK_PATH || '/data';
+
 if (!fs.existsSync(diskPath)) {
-  fs.mkdirSync(diskPath, { recursive: true });
+  try {
+    fs.mkdirSync(diskPath, { recursive: true });
+  } catch (e) {
+    console.log("Using local fallback path");
+  }
 }
 
-const dbPath = path.join(diskPath, 'database.sqlite');
+// เช็คว่าถ้ามี /data ให้ใช้ /data ถ้าไม่มีให้ใช้โฟลเดอร์เครื่อง local
+const targetDir = fs.existsSync('/data') ? '/data' : path.join(__dirname, 'data');
+if (!fs.existsSync(targetDir)) {
+  fs.mkdirSync(targetDir, { recursive: true });
+}
+
+const dbPath = path.join(targetDir, 'database.sqlite');
 console.log("=== DATABASE PATH:", dbPath, " ===");
 
 const db = new sqlite3.Database(dbPath, (err) => {

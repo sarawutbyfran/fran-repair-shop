@@ -5,6 +5,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadPartsDatabase();
   loadHistory();
   addItemRow();
+  
+  const sideBoxContent = document.getElementById('sideBoxContent');
+  if(sideBoxContent) sideBoxContent.style.display = 'none';
 });
 
 function setupInitialData() {
@@ -24,7 +27,7 @@ function updateLaborDesc() {
   const brand = document.getElementById('amp_brand').value;
   const power = document.getElementById('amp_power').value;
   const symptom = document.getElementById('symptom').value;
-  let desc = "รายการซ่อม แอมป์";
+  let desc = "รายการซ่อม";
   if (ampClass) desc += ` ${ampClass}`;
   if (brand) desc += ` ${brand}`;
   if (power) desc += ` ${power} W`;
@@ -129,7 +132,7 @@ function ArabicNumberToText(Number) {
   return text;
 }
 
-// คลังอะไหล่
+// 3. แก้ปัญหาเพิ่มอะไหล่แล้วขึ้นบิลทันทีโดยไม่ต้องรีเฟรช
 async function loadPartsDatabase() {
   try {
     const res = await fetch('/api/parts');
@@ -177,9 +180,10 @@ document.getElementById('addPartForm').addEventListener('submit', async (e) => {
   const method = editId ? 'PUT' : 'POST';
   const url = editId ? `/api/parts/${editId}` : '/api/parts';
   await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+  
   resetPartForm();
-  await loadPartsDatabase();
-  refreshAllDropdowns();
+  await loadPartsDatabase(); // ดึงข้อมูลคลังใหม่ทันที
+  refreshAllDropdowns();   // อัปเดต Dropdown ในหน้าทำบิลทันที
   alert('บันทึกข้อมูลอะไหล่สำเร็จ!');
 });
 
@@ -210,11 +214,17 @@ async function deletePart(id) {
 function refreshAllDropdowns() {
   document.querySelectorAll('#itemsTable tr:not(#laborRow)').forEach(row => {
     const typeSelect = row.querySelector('select:first-child');
-    if(typeSelect && typeSelect.value) filterPartsByType(typeSelect);
+    if(typeSelect) {
+      const currentVal = typeSelect.value;
+      const uniqueTypes = [...new Set(globalPartsData.map(p => p.part_type).filter(t => t))];
+      let typeOptions = `<option value="">- เลือกชนิด -</option>`;
+      uniqueTypes.forEach(t => { typeOptions += `<option value="${t}" ${t===currentVal?'selected':''}>${t}</option>`; });
+      typeSelect.innerHTML = typeOptions;
+      if(currentVal) filterPartsByType(typeSelect);
+    }
   });
 }
 
-// ประวัติงานซ่อม
 async function loadHistory() {
   try {
     const res = await fetch('/api/repairs');
@@ -415,46 +425,39 @@ document.getElementById('repairForm').addEventListener('submit', async (e) => {
   }
 });
 
-// ฟังก์ชันดาวน์โหลดภาพบิล ล็อคขนาดความกว้าง 800px และแปลงฟอร์มให้แสดงผลชัดเจน
-// ฟังก์ชันดาวน์โหลดภาพบิล รองรับมือถือทั้ง iOS และ Android บันทึกลงเครื่องทันที
+// 1. แก้ไขปุ่มดาวน์โหลดในมือถือ: เปิดรูปขึ้นมาในแท็บใหม่ให้กดค้างแล้วบันทึกลงอัลบั้มภาพได้ 100%
 function downloadBillImage() {
   const billArea = document.getElementById('billArea');
-  
-  // เพิ่มคลาสล็อคขนาด 800px ชั่วคราวเพื่อให้รูปสวยคมชัด
   billArea.classList.add('capturing-canvas');
-
-  // ซ่อนปุ่มลบตอนแคปเจอร์
   const deleteBtns = billArea.querySelectorAll('.hide-on-print');
   deleteBtns.forEach(el => el.style.display = 'none');
 
   html2canvas(billArea, { scale: 2, useCORS: true, logging: false }).then(canvas => {
-    // คืนค่าเดิม
     billArea.classList.remove('capturing-canvas');
     deleteBtns.forEach(el => el.style.display = '');
 
     const imageURL = canvas.toDataURL("image/png");
-    const billNo = document.getElementById('bill_no').value || 'repair';
-
-    // ตรวจสอบว่าเป็นอุปกรณ์มือถือ (iOS หรือ Android) หรือไม่
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     if (isMobile) {
-      // สำหรับมือถือ: สร้าง Tag <a> บังคับดาวน์โหลดตรงๆ โดยไม่ต้องเปิดหน้าต่าง Pop-up
-      const link = document.createElement('a');
-      link.href = imageURL;
-      link.download = `Bill-${billNo}.png`;
-      
-      // เพิ่มเข้าไปในหน้าเว็บชั่วคราวแล้วสั่งคลิกอัตโนมัติ
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // แจ้งเตือนเพื่อให้ผู้ใช้ทราบวิธีดูรูปในมือถือ
-      alert('บันทึกรูปภาพสำเร็จ! หากใช้ iPhone สามารถตรวจสอบรูปได้ในแอปรูปภาพ (Photos) หรือแอปไฟล์ (Files)');
+      // เปิดหน้าต่างรูปภาพโดยตรงเพื่อให้ผู้ใช้ในมือถือแตะค้างไว้แล้วเลือก "บันทึกรูปภาพ" (Add to Photos)
+      const win = window.open();
+      if(win) {
+        win.document.write(`
+          <html>
+            <head><title>ดาวน์โหลดบิล</title></head>
+            <body style="background:#111;text-align:center;margin:0;padding:20px;">
+              <p style="color:#fff;font-family:sans-serif;font-size:15px;margin-bottom:15px;">👉 กดค้างที่รูปภาพด้านล่าง แล้วเลือก <b>"บันทึกรูปภาพ"</b> หรือ <b>"Add to Photos"</b></p>
+              <img src="${imageURL}" style="max-width:100%;height:auto;border-radius:6px;box-shadow:0 4px 15px rgba(0,0,0,0.5);"/>
+            </body>
+          </html>
+        `);
+      } else {
+        alert('กรุณาอนุญาต Pop-up บนเบราว์เซอร์เพื่อแสดงรูปภาพบิล');
+      }
     } else {
-      // สำหรับคอมพิวเตอร์ (PC)
       const link = document.createElement('a');
-      link.download = `Bill-${billNo}.png`;
+      link.download = `Bill-${document.getElementById('bill_no').value}.png`;
       link.href = imageURL;
       document.body.appendChild(link);
       link.click();
