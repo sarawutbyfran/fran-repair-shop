@@ -12,18 +12,18 @@ const db = new sqlite3.Database(dbPath, (err) => {
   if (err) console.error('Error opening database', err.message);
   else {
     db.serialize(() => {
-      // ตารางหลังบ้าน: คลังอะไหล่
+      // ตารางคลังอะไหล่
       db.run(`CREATE TABLE IF NOT EXISTS parts_inventory (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        part_type TEXT,       -- ชนิด
-        part_name TEXT,       -- รายการ (ชื่อเบอร์อะไหล่)
-        cost_price REAL,      -- ราคาทุน
-        sale_price REAL,      -- ราคาขาย
-        profit REAL,          -- กำไร
-        source TEXT           -- แหล่งซื้อ
+        part_type TEXT,
+        part_name TEXT,
+        cost_price REAL,
+        sale_price REAL,
+        profit REAL,
+        source TEXT
       )`);
       
-      // ตารางบิลซ่อมหลัก
+      // ตารางบิลซ่อมหลัก (เพิ่ม status และรองรับการแก้ไข)
       db.run(`CREATE TABLE IF NOT EXISTS repairs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         bill_no TEXT,
@@ -35,6 +35,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
         amp_brand TEXT,
         amp_power TEXT,
         symptom TEXT,
+        status TEXT DEFAULT 'กำลังซ่อม',
         image_path TEXT,
         is_paid INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -52,4 +53,5 @@ const db = new sqlite3.Database(dbPath, (err) => {
     });
   }
 });
+
 module.exports = db;

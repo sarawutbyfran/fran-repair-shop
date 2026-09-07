@@ -22,7 +22,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// API: ดึงรายการอะไหล่ไปแสดงใน Dropdown
+// API: จัดการคลังอะไหล่
 app.get('/api/parts', (req, res) => {
   db.all("SELECT * FROM parts_inventory", [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -30,52 +30,6 @@ app.get('/api/parts', (req, res) => {
   });
 });
 
-// ... (โค้ดส่วนบนเหมือนเดิม) ...
-
-// แก้ไข Multer ให้รับไฟล์ได้สูงสุด 10 รูป
-app.post('/api/repairs', upload.array('repair_images', 10), (req, res) => {
-  try {
-    const {
-      bill_no, date, customer_name, customer_address,
-      repair_sender, amp_class, amp_brand, amp_power, symptom, items
-    } = req.body;
-
-    // รวมพาทรูปภาพทั้งหมดคั่นด้วยคอมม่า
-    const image_path = req.files && req.files.length > 0 
-      ? req.files.map(f => `/uploads/${f.filename}`).join(',') 
-      : '';
-    
-    const parsedItems = items ? JSON.parse(items) : [];
-
-    const sqlBill = `INSERT INTO repairs (bill_no, date, customer_name, customer_address, repair_sender, amp_class, amp_brand, amp_power, symptom, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    
-    db.run(sqlBill, [bill_no, date, customer_name, customer_address, repair_sender, amp_class, amp_brand, amp_power, symptom, image_path], function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      
-      const repairId = this.lastID;
-      const stmt = db.prepare(`INSERT INTO repair_items (repair_id, item_name, quantity, unit_price) VALUES (?, ?, ?, ?)`);
-      
-      parsedItems.forEach(item => {
-        if (item.name) stmt.run(repairId, item.name, item.qty, item.price);
-      });
-      stmt.finalize();
-
-      res.json({ success: true, id: repairId });
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Data parsing error' });
-  }
-});
-
-// ... (โค้ดส่วนอื่นเหมือนเดิม) ...
-// API: ดึงประวัติบิล
-app.get('/api/repairs', (req, res) => {
-  db.all("SELECT * FROM repairs ORDER BY id DESC", [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
-});
-// API: เพิ่มรายการอะไหล่เข้าระบบหลังบ้าน
 app.post('/api/parts', (req, res) => {
   const { part_type, part_name, cost_price, sale_price, profit, source } = req.body;
   db.run(`INSERT INTO parts_inventory (part_type, part_name, cost_price, sale_price, profit, source) VALUES (?, ?, ?, ?, ?, ?)`,
@@ -85,7 +39,78 @@ app.post('/api/parts', (req, res) => {
   });
 });
 
-// API: อัปเดตสถานะการจ่ายเงิน
+// API: ดึงประวัติบิลทั้งหมด
+app.get('/api/repairs', (req, res) => {
+  db.all("SELECT * FROM repairs ORDER BY id DESC", [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+// API: ดึงบิลเดี่ยวเพื่อนำมาแก้ไข
+app.get('/api/repairs/:id', (req, res) => {
+  db.get("SELECT * FROM repairs WHERE id = ?", [req.params.id], (err, repair) => {
+    if (err || !repair) return res.status(404).json({ error: 'Not found' });
+    db.all("SELECT * FROM repair_items WHERE repair_id = ?", [req.params.id], (err, items) => {
+      res.json({ ...repair, items });
+    });
+  });
+});
+
+// API: สร้างบิลใหม่ (รองรับหลายรูป)
+app.post('/api/repairs', upload.array('repair_images', 10), (req, res) => {
+  try {
+    const { bill_no, date, customer_name, customer_address, repair_sender, amp_class, amp_brand, amp_power, symptom, status, items } = req.body;
+    const image_path = req.files && req.files.length > 0 ? req.files.map(f => `/uploads/${f.filename}`).join(',') : '';
+    const parsedItems = items ? JSON.parse(items) : [];
+
+    const sqlBill = `INSERT INTO repairs (bill_no, date, customer_name, customer_address, repair_sender, amp_class, amp_brand, amp_power, symptom, status, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    
+    db.run(sqlBill, [bill_no, date, customer_name, customer_address, repair_sender, amp_class, amp_brand, amp_power, symptom, status || 'กำลังซ่อม', image_path], function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      const repairId = this.lastID;
+      const stmt = db.prepare(`INSERT INTO repair_items (repair_id, item_name, quantity, unit_price) VALUES (?, ?, ?, ?)`);
+      parsedItems.forEach(item => {
+        if (item.name) stmt.run(repairId, item.name, item.qty, item.price);
+      });
+      stmt.finalize();
+      res.json({ success: true, id: repairId });
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// API: อัปเดตบิลเดิม (แก้ไขข้อมูลและเพิ่มรูปภาพสะสม)
+app.put('/api/repairs/:id', upload.array('repair_images', 10), (req, res) => {
+  const id = req.params.id;
+  const { customer_name, customer_address, repair_sender, amp_class, amp_brand, amp_power, symptom, status, items } = req.body;
+  const parsedItems = items ? JSON.parse(items) : [];
+
+  db.get("SELECT image_path FROM repairs WHERE id = ?", [id], (err, row) => {
+    let new_image_path = row ? row.image_path : '';
+    if (req.files && req.files.length > 0) {
+      const uploadedPaths = req.files.map(f => `/uploads/${f.filename}`).join(',');
+      new_image_path = new_image_path ? `${new_image_path},${uploadedPaths}` : uploadedPaths;
+    }
+
+    const sqlBill = `UPDATE repairs SET customer_name=?, customer_address=?, repair_sender=?, amp_class=?, amp_brand=?, amp_power=?, symptom=?, status=?, image_path=? WHERE id=?`;
+    db.run(sqlBill, [customer_name, customer_address, repair_sender, amp_class, amp_brand, amp_power, symptom, status, new_image_path, id], (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      
+      db.run(`DELETE FROM repair_items WHERE repair_id=?`, [id], () => {
+        const stmt = db.prepare(`INSERT INTO repair_items (repair_id, item_name, quantity, unit_price) VALUES (?, ?, ?, ?)`);
+        parsedItems.forEach(item => {
+          if (item.name) stmt.run(id, item.name, item.qty, item.price);
+        });
+        stmt.finalize();
+        res.json({ success: true });
+      });
+    });
+  });
+});
+
+// API: สลับสถานะการจ่ายเงิน
 app.patch('/api/repairs/:id/pay', (req, res) => {
   const { is_paid } = req.body;
   db.run(`UPDATE repairs SET is_paid = ? WHERE id = ?`, [is_paid, req.params.id], function(err) {
@@ -94,4 +119,5 @@ app.patch('/api/repairs/:id/pay', (req, res) => {
   });
 });
 
-app.listen(process.env.PORT || 10000, '0.0.0.0', () => console.log('Server is running'));
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
