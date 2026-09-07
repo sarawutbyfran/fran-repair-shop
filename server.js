@@ -30,15 +30,21 @@ app.get('/api/parts', (req, res) => {
   });
 });
 
-// API: บันทึกบิล (ป้องกัน Server Crash ด้วยการเช็ค Error อย่างรัดกุม)
-app.post('/api/repairs', upload.single('repair_image'), (req, res) => {
+// ... (โค้ดส่วนบนเหมือนเดิม) ...
+
+// แก้ไข Multer ให้รับไฟล์ได้สูงสุด 10 รูป
+app.post('/api/repairs', upload.array('repair_images', 10), (req, res) => {
   try {
     const {
       bill_no, date, customer_name, customer_address,
       repair_sender, amp_class, amp_brand, amp_power, symptom, items
     } = req.body;
 
-    const image_path = req.file ? `/uploads/${req.file.filename}` : '';
+    // รวมพาทรูปภาพทั้งหมดคั่นด้วยคอมม่า
+    const image_path = req.files && req.files.length > 0 
+      ? req.files.map(f => `/uploads/${f.filename}`).join(',') 
+      : '';
+    
     const parsedItems = items ? JSON.parse(items) : [];
 
     const sqlBill = `INSERT INTO repairs (bill_no, date, customer_name, customer_address, repair_sender, amp_class, amp_brand, amp_power, symptom, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
@@ -61,6 +67,7 @@ app.post('/api/repairs', upload.single('repair_image'), (req, res) => {
   }
 });
 
+// ... (โค้ดส่วนอื่นเหมือนเดิม) ...
 // API: ดึงประวัติบิล
 app.get('/api/repairs', (req, res) => {
   db.all("SELECT * FROM repairs ORDER BY id DESC", [], (err, rows) => {

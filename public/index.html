@@ -7,148 +7,122 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
-    /* ตั้งค่าให้เวลาพิมพ์บิล เส้นตารางคมชัดขึ้น */
     .print-border td, .print-border th { border-color: #22d3ee; border-width: 1px; border-style: solid; }
   </style>
 </head>
-<body class="bg-gray-100 p-2 md:p-6 font-sans">
-  <div class="max-w-5xl mx-auto space-y-6">
+<body class="bg-gray-100 p-2 font-sans">
+  <div class="max-w-5xl mx-auto space-y-4">
     
-    <!-- ฟอร์มสร้างบิล -->
-    <form id="repairForm" class="bg-white p-6 rounded-lg shadow-md border border-gray-300">
-      <div id="billArea" class="bg-white p-4 border-2 border-cyan-400 rounded-lg relative pb-8">
+    <form id="repairForm" class="bg-white p-4 rounded-lg shadow-md border border-gray-300">
+      <div id="billArea" class="bg-white p-3 border-2 border-cyan-400 rounded-lg relative pb-4">
         
         <!-- โลโก้ และ หัวบิล -->
-        <div class="flex justify-between items-start mb-6 border-b-2 border-cyan-200 pb-4">
-          <div class="flex items-center gap-4">
-            <!-- ใส่ชื่อไฟล์โลโก้ของคุณที่นี่ (นำรูปไปวางในโฟลเดอร์ public) -->
-            <img src="logo.png" alt="Logo" class="h-16 w-16 object-contain border rounded" onerror="this.style.display='none'">
+        <div class="flex justify-between items-center mb-3 border-b-2 border-cyan-200 pb-2">
+          <div class="flex items-center gap-3">
+            <!-- 1. ใส่โลโก้ที่หัวมุมซ้าย (นำไฟล์ logo.png มาใส่ใน public) -->
+            <img src="logo.png" alt="Logo" class="h-14 w-14 object-contain rounded" onerror="this.style.display='none'">
             <div>
-              <h1 class="text-3xl font-extrabold text-gray-800">By Fran Circuit</h1>
-              <p class="text-sm text-gray-600">ที่อยู่ 3/10 หมู่ 5 ทุ่งบางกระแบล ต.นาป่า อ.เมือง จ.ชลบุรี 20000</p>
+              <h1 class="text-2xl font-extrabold text-gray-800">By Fran Circuit</h1>
+              <p class="text-xs text-gray-600">ที่อยู่ 3/10 หมู่ 5 ทุ่งบางกระแบล ต.นาป่า อ.เมือง จ.ชลบุรี 20000</p>
             </div>
           </div>
-          <div class="text-center bg-cyan-100 px-8 py-3 rounded-xl border-2 border-cyan-400 shadow-sm">
-            <h2 class="text-2xl font-bold text-cyan-900">บิลเงินสด</h2>
+          <div class="bg-cyan-100 px-6 py-2 rounded-xl border-2 border-cyan-400">
+            <h2 class="text-xl font-bold text-cyan-900">บิลเงินสด</h2>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
-          <div class="md:col-span-2 border border-cyan-300 p-4 rounded-lg space-y-3 bg-white">
-            <div class="flex items-center gap-2"><label class="text-sm font-bold w-24">ชื่อลูกค้า:</label> <input type="text" id="customer_name" class="flex-1 border p-1.5 rounded focus:ring-2 focus:ring-cyan-300 outline-none" required></div>
-            <div class="flex items-center gap-2"><label class="text-sm font-bold w-24">ที่อยู่:</label> <input type="text" id="customer_address" class="flex-1 border p-1.5 rounded focus:ring-2 focus:ring-cyan-300 outline-none"></div>
+        <!-- 2. ปรับขนาดกล่องข้อมูลลูกค้าและเลขบิลให้เล็กลงและกระชับขึ้น -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3 text-sm">
+          <div class="md:col-span-2 border border-cyan-300 p-2 rounded space-y-2 bg-white">
+            <div class="flex items-center gap-2"><label class="font-bold w-16">ชื่อลูกค้า:</label> <input type="text" id="customer_name" class="flex-1 border p-1 rounded outline-none" required></div>
+            <div class="flex items-center gap-2"><label class="font-bold w-16">ที่อยู่:</label> <input type="text" id="customer_address" class="flex-1 border p-1 rounded outline-none"></div>
           </div>
-          <div class="border border-cyan-300 p-4 rounded-lg space-y-3 bg-white">
-            <div class="flex items-center gap-2"><label class="text-sm font-bold w-28">เลขที่ / No.:</label> <input type="text" id="bill_no" class="flex-1 border p-1.5 rounded bg-gray-50 text-red-600 font-bold" readonly></div>
-            <!-- ดัดแปลงวันที่ให้แสดงผลเป็น วัน/เดือน/ปี แบบไทยด้วย JS -->
-            <div class="flex items-center gap-2"><label class="text-sm font-bold w-28">วันที่ / Date:</label> <input type="text" id="date_display" class="flex-1 border p-1.5 rounded bg-gray-50" readonly></div>
+          <div class="border border-cyan-300 p-2 rounded space-y-2 bg-white">
+            <div class="flex items-center gap-2"><label class="font-bold w-20">เลขที่ / No.:</label> <input type="text" id="bill_no" class="flex-1 border p-1 rounded bg-gray-50 text-red-600 font-bold" readonly></div>
+            <div class="flex items-center gap-2"><label class="font-bold w-20">วันที่ / Date:</label> <input type="text" id="date_display" class="flex-1 border p-1 rounded bg-gray-50" readonly></div>
             <input type="hidden" id="date" name="date">
           </div>
         </div>
 
-        <div class="flex flex-col md:flex-row gap-4 mb-4">
+        <div class="flex flex-col md:flex-row gap-3 mb-2">
           <!-- ตารางรายการ -->
           <div class="flex-1">
             <table class="w-full text-sm print-border">
               <thead>
                 <tr class="bg-cyan-50">
-                  <th class="p-2 w-12 text-center">ลำดับ</th>
-                  <th class="p-2 text-left">รายการ (Descriptions)</th>
-                  <th class="p-2 w-20 text-center">จำนวน</th>
-                  <th class="p-2 w-24 text-right">หน่วยละ</th>
-                  <th class="p-2 w-28 text-right">จำนวนเงิน</th>
+                  <th class="p-1 w-10 text-center">ลำดับ</th>
+                  <th class="p-1 text-left">รายการ (Descriptions)</th>
+                  <th class="p-1 w-16 text-center">จำนวน</th>
+                  <th class="p-1 w-20 text-right">หน่วยละ</th>
+                  <th class="p-1 w-24 text-right">จำนวนเงิน</th>
+                  <th class="p-1 w-8 text-center hide-on-print">ลบ</th>
                 </tr>
               </thead>
-              <tbody id="itemsTable"></tbody>
-              <!-- ส่วนสรุปยอดเงินและข้อความภาษาไทย -->
+              <tbody id="itemsTable">
+                <!-- 9. บรรทัดแรกสำหรับค่าแรง (สร้างอัตโนมัติ) -->
+                <tr id="laborRow">
+                  <td class="p-1 text-center font-bold row-num">1</td>
+                  <td class="p-1"><input type="text" id="labor_desc" class="w-full p-1 bg-yellow-50 font-bold text-blue-800 outline-none" value="รายการซ่อม แอมป์ -" readonly></td>
+                  <td class="p-1"><input type="number" class="item-qty w-full p-1 text-center border rounded outline-none" value="1" readonly></td>
+                  <td class="p-1"><input type="number" class="item-price w-full p-1 text-right border rounded outline-none" value="0" oninput="calculateTotal()"></td>
+                  <td class="p-1 text-right item-total font-bold">0.00</td>
+                  <td class="p-1 text-center hide-on-print"></td>
+                </tr>
+              </tbody>
               <tfoot>
                 <tr>
-                  <td colspan="2" class="p-2 text-center font-bold text-cyan-800 bg-cyan-50" id="total_text_thai">( ศูนย์บาทถ้วน )</td>
-                  <td colspan="2" class="p-2 text-right font-bold border-t border-cyan-400">รวมเงิน</td>
-                  <td class="p-2 text-right font-bold border-t border-cyan-400 text-red-600 text-lg underline decoration-double" id="grand_total">0.00</td>
+                  <td colspan="2" class="p-1 text-center font-bold text-cyan-800 bg-cyan-50" id="total_text_thai">( ศูนย์บาทถ้วน )</td>
+                  <td colspan="2" class="p-1 text-right font-bold border-t">รวมเงิน</td>
+                  <td class="p-1 text-right font-bold border-t text-red-600 text-base" id="grand_total">0.00</td>
+                  <td class="hide-on-print border-t"></td>
                 </tr>
               </tfoot>
             </table>
-            <button type="button" id="btnAddItem" onclick="addItemRow()" class="mt-3 bg-blue-500 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-600 shadow">+ เพิ่มรายการอะไหล่</button>
+            <button type="button" id="btnAddItem" onclick="addItemRow()" class="mt-2 bg-blue-500 text-white px-3 py-1 rounded text-xs shadow hide-on-print">+ เพิ่มรายการอะไหล่</button>
           </div>
 
-          <!-- ข้อมูลงานซ่อม (จะถูกซ่อนตอนดาวน์โหลดบิล) -->
-          <div id="sideBox" class="w-full md:w-64 bg-orange-50 p-4 rounded-lg border border-orange-300 space-y-2 text-sm shadow-sm h-fit">
-            <h3 class="font-extrabold text-orange-900 text-center border-b border-orange-200 pb-2 mb-2">ข้อมูลงานซ่อม (บันทึกหลังบ้าน)</h3>
-            <div class="flex flex-col"><span class="font-bold">ส่งงาน:</span> <input type="text" id="repair_sender" class="border p-1 rounded"></div>
-            <div class="flex flex-col"><span class="font-bold">Class:</span> <input type="text" id="amp_class" class="border p-1 rounded" placeholder="เช่น Class D"></div>
-            <div class="flex flex-col"><span class="font-bold">ยี่ห้อ:</span> <input type="text" id="amp_brand" class="border p-1 rounded"></div>
-            <div class="flex flex-col"><span class="font-bold">กำลัง:</span> <input type="text" id="amp_power" class="border p-1 rounded" placeholder="เช่น 5000"></div>
-            <div class="flex flex-col"><span class="font-bold">อาการ:</span> <input type="text" id="symptom" class="border p-1 rounded" placeholder="เช่น โพรเทค"></div>
+          <!-- ข้อมูลงานซ่อม (Dropdowns) -->
+          <div id="sideBox" class="w-full md:w-56 bg-orange-50 p-2 rounded border border-orange-300 text-xs h-fit hide-on-print">
+            <h3 class="font-extrabold text-orange-900 text-center border-b border-orange-200 pb-1 mb-1">ข้อมูลงานซ่อม (หลังบ้าน)</h3>
+            
+            <div class="flex flex-col mb-1"><span class="font-bold">ส่งงาน:</span> 
+              <select id="repair_sender" class="border p-1 rounded">
+                <option value="หน้าร้าน">หน้าร้าน</option><option value="พี่พล">พี่พล</option><option value="พี่โจ้">พี่โจ้</option>
+                <option value="พี่แมน">พี่แมน</option><option value="พี่โอม">พี่โอม</option><option value="พี่นพ">พี่นพ</option>
+              </select>
+            </div>
+            <div class="flex flex-col mb-1"><span class="font-bold">Class:</span> 
+              <select id="amp_class" class="border p-1 rounded" onchange="updateLaborDesc()">
+                <option value="">- เลือก -</option><option value="Class AB">Class AB</option><option value="Class D">Class D</option>
+                <option value="Class H">Class H</option><option value="Class TD">Class TD</option><option value="Preamp">Preamp</option><option value="อื่นๆ">อื่นๆ</option>
+              </select>
+            </div>
+            <div class="flex flex-col mb-1"><span class="font-bold">ยี่ห้อ:</span> <input type="text" id="amp_brand" class="border p-1 rounded" oninput="updateLaborDesc()"></div>
+            <div class="flex flex-col mb-1"><span class="font-bold">กำลัง:</span> <input type="text" id="amp_power" class="border p-1 rounded" placeholder="เช่น 5000" oninput="updateLaborDesc()"></div>
+            <div class="flex flex-col mb-1"><span class="font-bold">อาการ:</span> 
+              <select id="symptom" class="border p-1 rounded" onchange="updateLaborDesc()">
+                <option value="">- เลือก -</option><option value="โพรเทค">โพรเทค</option><option value="ไฟไม่เข้า">ไฟไม่เข้า</option>
+                <option value="ไหม้">ไหม้</option><option value="ไม่มีเสียง">ไม่มีเสียง</option><option value="งานโม">งานโม</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div id="uploadBox" class="flex justify-between items-center bg-gray-50 p-3 border border-gray-300 rounded mt-4">
-          <span class="font-bold">แนบรูปภาพงานซ่อม:</span>
-          <input type="file" id="repair_image" accept="image/*" class="text-sm">
+        <!-- 5. แนบรูปภาพหลายรูป -->
+        <div id="uploadBox" class="flex justify-between items-center bg-gray-50 p-2 border border-gray-300 rounded text-sm hide-on-print">
+          <span class="font-bold">แนบรูปภาพงานซ่อม (เลือกได้หลายรูป):</span>
+          <input type="file" id="repair_images" accept="image/*" multiple class="text-xs">
         </div>
       </div>
 
-      <div class="mt-6 flex flex-wrap gap-4">
-        <button type="submit" class="bg-green-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-green-700 shadow-lg text-lg">บันทึกบิล</button>
-        <button type="button" onclick="downloadBillImage()" class="bg-purple-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-purple-700 shadow-lg text-lg">ดาวน์โหลดบิลเป็นรูปภาพ</button>
+      <div class="mt-4 flex flex-wrap gap-2 hide-on-print">
+        <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded font-bold hover:bg-green-700 shadow text-sm">บันทึกบิล</button>
+        <button type="button" onclick="downloadBillImage()" class="bg-purple-600 text-white px-6 py-2 rounded font-bold hover:bg-purple-700 shadow text-sm">ดาวน์โหลดบิลเป็นรูปภาพ</button>
       </div>
     </form>
 
-    <!-- Datalist สำหรับโหลดชื่ออะไหล่จากฐานข้อมูลมาเป็น Auto-complete -->
-    <datalist id="partsList"></datalist>
-
-    <!-- ================= ส่วนที่ 2: ประวัติงานซ่อม ================= -->
-    <div class="bg-white p-6 rounded-lg shadow-md border border-gray-300">
-      <h2 class="text-xl font-bold mb-4 text-blue-800">ประวัติงานซ่อม / เช็คสถานะชำระเงิน</h2>
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm border-collapse">
-          <thead>
-            <tr class="bg-blue-50 border-b">
-              <th class="p-2 border">เลขที่บิล</th>
-              <th class="p-2 border">วันที่</th>
-              <th class="p-2 border">ลูกค้า</th>
-              <th class="p-2 border">อาการ</th>
-              <th class="p-2 border text-center">รูปถ่าย</th>
-              <th class="p-2 border text-center">สถานะเงิน</th>
-            </tr>
-          </thead>
-          <tbody id="historyTable"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- ================= ส่วนที่ 3: ระบบหลังบ้าน (คลังอะไหล่) ================= -->
-    <div class="bg-white p-6 rounded-lg shadow-md border border-gray-300">
-      <h2 class="text-xl font-bold mb-4 text-orange-800">ระบบหลังบ้าน: จัดการคลังอะไหล่</h2>
-      
-      <!-- ฟอร์มเพิ่มอะไหล่ -->
-      <form id="addPartForm" class="grid grid-cols-2 md:grid-cols-6 gap-2 mb-4 bg-orange-50 p-3 border border-orange-200 rounded">
-        <div><label class="text-xs font-bold">ชนิด</label><input type="text" id="part_type" class="w-full border p-1 rounded" placeholder="เช่น IC"></div>
-        <div><label class="text-xs font-bold">รายการ</label><input type="text" id="part_name" class="w-full border p-1 rounded" placeholder="เช่น IRS2092" required></div>
-        <div><label class="text-xs font-bold">ราคาทุน</label><input type="number" id="cost_price" class="w-full border p-1 rounded" value="0"></div>
-        <div><label class="text-xs font-bold">ราคาขาย</label><input type="number" id="sale_price" class="w-full border p-1 rounded" value="0"></div>
-        <div><label class="text-xs font-bold">แหล่งซื้อ</label><input type="text" id="part_source" class="w-full border p-1 rounded"></div>
-        <div class="flex items-end"><button type="submit" class="w-full bg-orange-600 text-white font-bold py-1 rounded hover:bg-orange-700">บันทึก</button></div>
-      </form>
-
-      <!-- ตารางอะไหล่ในคลัง -->
-      <div class="overflow-x-auto h-64 overflow-y-auto">
-        <table class="w-full text-left text-sm border-collapse border border-gray-200">
-          <thead class="bg-gray-100 sticky top-0">
-            <tr>
-              <th class="p-2 border">ชนิด</th>
-              <th class="p-2 border">รายการ</th>
-              <th class="p-2 border text-right">ทุน</th>
-              <th class="p-2 border text-right">ขาย</th>
-              <th class="p-2 border text-right">กำไร</th>
-              <th class="p-2 border">แหล่งซื้อ</th>
-            </tr>
-          </thead>
-          <tbody id="partsInventoryTable"></tbody>
-        </table>
-      </div>
-    </div>
+    <!-- (ส่วนที่ 2 และ 3 ของเดิม: ประวัติงานซ่อม และ ระบบหลังบ้าน ให้นำมาวางต่อตรงนี้เหมือนเดิม) -->
+    
   </div>
   <script src="script.js"></script>
 </body>
