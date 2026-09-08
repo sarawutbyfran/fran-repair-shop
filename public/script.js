@@ -471,7 +471,6 @@ async function togglePay(id, status) {
   loadDashboardStats();
 }
 
-// ----------------- แก้ไขฟังก์ชันกดแก้ไขบิล (แยก ชนิด และ ชื่ออะไหล่ ออกจากกันอย่างถูกต้อง) -----------------
 async function editRepair(id) {
   const res = await fetch(`/api/repairs/${id}`);
   const data = await res.json();
@@ -505,7 +504,6 @@ async function editRepair(id) {
       let parsedType = "";
       let parsedName = rawName;
 
-      // แยกรูปแบบ (ชนิด) ออกจากชื่ออะไหล่
       const match = rawName.match(/^\((.*?)\)\s*(.*)$/);
       if (match) {
         parsedType = match[1];
@@ -570,14 +568,13 @@ document.getElementById('repairForm').addEventListener('submit', async (e) => {
     price: document.querySelector('#laborRow .item-price').value || 0
   });
 
-  // บันทึกเฉพาะชื่ออะไหล่บริสุทธิ์ (ระบบจะจัดรูปแบบตอนแสดงผลหรือดาวน์โหลด)
   document.querySelectorAll('#itemsTable tr:not(#laborRow)').forEach(row => {
     const type = row.querySelector('.item-type-select')?.value;
     const name = row.querySelector('.item-search')?.value;
     const qty = row.querySelector('.item-qty')?.value;
     const price = row.querySelector('.item-price')?.value;
     if (name) {
-      const cleanName = name.replace(/^\(.*?\)\s*/, ''); // ตัดวงเล็บชนิดออกถ้ามีค้างอยู่
+      const cleanName = name.replace(/^\(.*?\)\s*/, '');
       const combinedName = type ? `(${type}) ${cleanName}` : cleanName;
       items.push({ name: combinedName, qty, price });
     }
@@ -610,7 +607,7 @@ async function deleteRepair(id) {
   }
 }
 
-// ----------------- ฟังก์ชันดาวน์โหลดรูปบิล (แสดงผลเรียบร้อยและไม่ซ้ำซ้อน) -----------------
+// ----------------- แก้ไขฟังก์ชันดาวน์โหลดรูปบิลให้สมบูรณ์ (ไม่ซ้ำซ้อน) -----------------
 function downloadBillImage() {
   const billArea = document.getElementById('billArea');
   const hideElements = billArea.querySelectorAll('.hide-on-print');
@@ -636,7 +633,7 @@ function downloadBillImage() {
 
         const sDesc = document.createElement('div');
         sDesc.innerText = laborDesc.value;
-        sDesc.style.fontSize = '12px'; sDesc.style.padding = '0 4px'; sDesc.style.height = '28px'; sDesc.style.lineHeight = '28px';
+        sDesc.style.fontSize = '12px'; sDesc.style.fontWeight = 'bold'; sDesc.style.color = '#1e40af'; sDesc.style.padding = '0 4px'; sDesc.style.height = '28px'; sDesc.style.lineHeight = '28px';
         tdDesc.insertBefore(sDesc, laborDesc); laborDesc.style.display = 'none';
 
         const sQty = document.createElement('div');
@@ -689,7 +686,7 @@ function downloadBillImage() {
     }
   });
 
-  const inputs = billArea.querySelectorAll('input:not([type="hidden"]):not(.item-search):not(.item-qty):not(.item-price), select:not(.item-type-select)');
+  const inputs = billArea.querySelectorAll('input:not([type="hidden"]):not(.item-search):not(.item-qty):not(.item-price):not(#labor_desc), select:not(.item-type-select)');
   const replacements = [];
   
   inputs.forEach(el => {
