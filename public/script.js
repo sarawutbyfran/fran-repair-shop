@@ -321,19 +321,29 @@ function openImageModal(imagePathsStr) {
   const container = document.getElementById('modalImagesContainer');
   container.innerHTML = '';
   const paths = imagePathsStr.split(',');
+  
   paths.forEach((path, index) => {
+    // สร้างรูปแบบการ์ดเรียงต่อกันเป็นแนวตั้ง ใช้นิ้วเลื่อนขึ้นลงได้สะดวก
     container.innerHTML += `
-      <div class="border rounded p-2 flex flex-col items-center bg-gray-50 shadow-sm">
-        <img src="${path}" class="h-32 object-contain mb-2 rounded border bg-white" alt="Repair Image">
-        <a href="${path}" download="repair-photo-${index+1}.png" target="_blank" class="bg-blue-600 text-white text-xs px-3 py-1 rounded font-bold hover:bg-blue-700 shadow w-full text-center">📥 โหลดรูปลงเครื่อง</a>
+      <div class="bg-white border rounded-xl p-3 shadow-sm flex flex-col items-center">
+        <span class="text-xs font-bold text-gray-500 mb-2 bg-gray-100 px-3 py-1 rounded-full">รูปที่ ${index + 1} / ${paths.length}</span>
+        <img src="${path}" class="w-full max-h-72 object-contain rounded border mb-3" alt="Repair Image">
+        <a href="${path}" download="repair-photo-${index+1}.png" target="_blank" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold hover:bg-blue-700 shadow flex justify-center items-center gap-2">
+          📥 บันทึกรูปลงเครื่อง
+        </a>
       </div>
     `;
   });
-  document.getElementById('imageModal').classList.remove('hidden');
+  
+  const modal = document.getElementById('imageModal');
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
 }
 
 function closeImageModal() {
-  document.getElementById('imageModal').classList.add('hidden');
+  const modal = document.getElementById('imageModal');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
 }
 
 async function togglePay(id, status) {
@@ -459,77 +469,81 @@ function closeBillPreview() {
 }
 
 // ฟังก์ชันดาวน์โหลดภาพบิลที่ปรับปรุงใหม่ (แปลง input เป็นข้อความก่อนแคป)
+// ฟังก์ชันดาวน์โหลดภาพบิล (อัปเดตแก้ปัญหากรอบตารางหลุด)
 function downloadBillImage() {
   const billArea = document.getElementById('billArea');
   
-  // 1. ซ่อนปุ่มและส่วนที่ไม่ต้องการพิมพ์
   const hideElements = billArea.querySelectorAll('.hide-on-print');
   hideElements.forEach(el => el.style.display = 'none');
 
-  // 2. แปลง <input> และ <select> เป็น <div> ข้อความธรรมดา เพื่อแก้ปัญหาอักษรหลุดขอบ
-  const inputs = billArea.querySelectorAll('input, select');
+  const inputs = billArea.querySelectorAll('input:not([type="hidden"]), select');
   const replacements = [];
   
   inputs.forEach(el => {
-    // ดึงค่าข้อความออกมา
-    const val = el.tagName === 'SELECT' ? (el.options[el.selectedIndex]?.text || '') : el.value;
+    let val = el.tagName === 'SELECT' ? (el.options[el.selectedIndex]?.text || '') : el.value;
     
-    // สร้าง <div> ปลอมขึ้นมาแทนที่
+    // หากค่าเป็น "- เลือกรายการ -" ให้พิมพ์ออกมาเป็นช่องว่างบิลจะได้สะอาดๆ
+    if (val.includes('- เลือก')) val = '';
+    
     const span = document.createElement('div');
     span.innerText = val;
-    span.className = el.className; // ใช้คลาสเดียวกับ input เป๊ะๆ
     
-    // จัด Style ให้เหมือนกล่อง Input เดิมเพื่อรักษา Layout
+    // ตั้งค่าการจัดวางข้อความ
     span.style.display = 'flex';
     span.style.alignItems = 'center';
     span.style.minHeight = el.offsetHeight > 0 ? el.offsetHeight + 'px' : '28px';
-    if (el.classList.contains('text-right')) span.style.justifyContent = 'flex-end';
-    if (el.classList.contains('text-center')) span.style.justifyContent = 'center';
-    span.style.padding = '0 4px';
-    span.style.background = el.style.background || (el.classList.contains('bg-white') ? '#ffffff' : 'transparent');
+    span.style.width = '100%';
+    span.style.fontSize = '12px'; // ขนาดอักษรมาตรฐาน
     
-    // นำไปใส่แทนที่
+    // คัดลอกความหนาและสีข้อความ
+    span.style.fontWeight = el.classList.contains('font-bold') ? 'bold' : 'normal';
+    span.style.color = el.classList.contains('text-red-600') ? '#dc2626' : (el.classList.contains('text-blue-800') ? '#1e40af' : '#000');
+    
+    // จัดซ้าย-กลาง-ขวา ตามช่องเดิม
+    if (el.classList.contains('text-right')) span.style.justifyContent = 'flex-end';
+    else if (el.classList.contains('text-center')) span.style.justifyContent = 'center';
+    else span.style.justifyContent = 'flex-start';
+    
+    span.style.background = 'transparent';
+    span.style.padding = '0 4px';
+    
+    // **หัวใจสำคัญ:** 
+    // - ถ้าอยู่นอกตาราง (เช่น ชื่อลูกค้า) ให้มีเส้นใต้
+    // - ถ้าอยู่ในตาราง (เช่น อะไหล่) ไม่ต้องใส่กรอบใดๆ เลย ให้เนียนไปกับตาราง!
+    if (!el.closest('#itemsTable')) {
+      span.style.borderBottom = '1px solid #9ca3af';
+    } else {
+      span.style.border = 'none';
+    }
+    
     el.parentNode.insertBefore(span, el);
     
-    // เก็บสถานะเดิมไว้เพื่อซ่อน input จริง
     const originalDisplay = el.style.display;
     el.style.display = 'none';
     
     replacements.push({ el, span, originalDisplay });
   });
 
-  // 3. กำหนดคลาสล็อคความกว้างบิลให้คงที่
   billArea.classList.add('capturing-canvas');
 
-  // 4. เริ่มทำการแคปเจอร์รูปภาพ
-  html2canvas(billArea, { 
-    scale: 2, 
-    useCORS: true, 
-    logging: false,
-    backgroundColor: '#ffffff'
-  }).then(canvas => {
-    // 5. คืนค่าการแสดงผลทุกอย่างกลับเป็นปกติทันที
+  html2canvas(billArea, { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' }).then(canvas => {
     billArea.classList.remove('capturing-canvas');
     hideElements.forEach(el => el.style.display = '');
     replacements.forEach(r => {
-      r.span.remove(); // ลบ div ปลอมทิ้ง
-      r.el.style.display = r.originalDisplay; // โชว์ input จริงกลับมา
+      r.span.remove();
+      r.el.style.display = r.originalDisplay;
     });
 
-    // 6. ประมวลผลรูปภาพและดาวน์โหลด/โชว์ Modal
     const imageURL = canvas.toDataURL("image/png");
-    
-    // ตรวจสอบมือถือ หรือจอเล็ก
     const isMobile = window.innerWidth <= 768 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     if (isMobile) {
-      // เปิด Modal โชว์รูปภาพในมือถือ
       const modal = document.getElementById('billPreviewModal');
       const imgElem = document.getElementById('billImageElement');
       imgElem.src = imageURL;
-      modal.style.display = 'flex'; // บังคับโชว์ชัวร์ๆ
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
     } else {
-      // โหลดไฟล์ลงเครื่องอัตโนมัติบน PC
       const link = document.createElement('a');
       const billNo = document.getElementById('bill_no').value || 'repair';
       link.download = `Bill-${billNo}.png`;
@@ -539,15 +553,9 @@ function downloadBillImage() {
       document.body.removeChild(link);
     }
   }).catch(err => {
-    console.error("เกิดข้อผิดพลาดในการสร้างรูป:", err);
-    alert("เกิดข้อผิดพลาดในการสร้างรูปบิล กรุณาลองใหม่");
-    
-    // หาก Error ก็ต้องคืนค่าหน้าเว็บให้กลับมาใช้งานต่อได้
+    console.error(err);
     billArea.classList.remove('capturing-canvas');
     hideElements.forEach(el => el.style.display = '');
-    replacements.forEach(r => {
-      r.span.remove();
-      r.el.style.display = r.originalDisplay;
-    });
+    replacements.forEach(r => { r.span.remove(); r.el.style.display = r.originalDisplay; });
   });
 }
