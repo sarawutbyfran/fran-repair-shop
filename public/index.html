@@ -13,7 +13,6 @@
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #111827; }
     ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
-    /* จัดกึ่งกลางป้ายบิลเงินสด */
     .bill-badge { padding: 10px 24px; text-align: center; }
   </style>
 </head>
@@ -39,7 +38,7 @@
       <button onclick="switchTab('dashboardTab')" id="btn-dashboardTab" class="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-cyan-600 text-white shadow-md transition-all whitespace-nowrap">📊 ภาพรวม</button>
       <button onclick="switchTab('billTab')" id="btn-billTab" class="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all whitespace-nowrap">📝 ทำบิล</button>
       <button onclick="switchTab('historyTab')" id="btn-historyTab" class="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all whitespace-nowrap">📋 ประวัติ</button>
-      <button onclick="switchTab('galleryTab')" id="btn-galleryTab" class="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all whitespace-nowrap">📸 คลังรูปภาพ</button>
+      <button onclick="switchTab('galleryTab')" id="btn-galleryTab" class="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all whitespace-nowrap">📸 อัลบั้มรูปภาพ</button>
       <button onclick="switchTab('inventoryTab')" id="btn-inventoryTab" class="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all whitespace-nowrap">⚙️ คลังอะไหล่</button>
     </div>
 
@@ -142,9 +141,9 @@
         </div>
 
         <div class="flex flex-wrap gap-2 pt-2">
-          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg transition-all text-sm">💾 บันทึกบิลซ่อม</button>
+          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg transition-all text-sm">💾 บันทึก/อัปเดตบิล</button>
           <button type="button" onclick="downloadBillImage()" class="bg-purple-600 hover:bg-purple-500 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg transition-all text-sm">📥 ดาวน์โหลดรูปบิล</button>
-          <button type="button" onclick="resetForm()" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2.5 rounded-xl font-bold transition-all text-sm">🔄 ล้างฟอร์มใหม่</button>
+          <button type="button" onclick="resetForm()" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2.5 rounded-xl font-bold transition-all text-sm">🔄 สร้างฟอร์มใหม่</button>
         </div>
       </form>
     </div>
@@ -184,21 +183,29 @@
       </div>
     </div>
 
-    <!-- ================= 3. คลังรูปภาพ (Gallery อิสระ) ================= -->
-    <div id="tab-galleryTab" class="tab-content hidden">
+    <!-- ================= 3. หน้าอัลบั้มรูปภาพ ================= -->
+    <div id="tab-galleryTab" class="tab-content hidden space-y-6">
+      <!-- อัลบั้มคลังรูปภาพทั่วไป -->
       <div class="bg-gray-900 p-4 md:p-6 rounded-2xl shadow-xl border border-gray-800 space-y-4">
         <div class="flex justify-between items-center border-b border-gray-800 pb-3">
           <div>
-            <h2 class="text-xl font-bold text-purple-400">📸 คลังรูปภาพระหว่างเครื่อง</h2>
-            <p class="text-xs text-gray-400 mt-1">พื้นที่อัปโหลด/โหลดรูปภาพข้ามอุปกรณ์ (ไม่เกี่ยวกับประวัติบิล)</p>
+            <h2 class="text-xl font-bold text-purple-400">📸 อัลบั้มคลังรูปภาพทั่วไป (ส่งข้ามเครื่อง)</h2>
+            <p class="text-xs text-gray-400 mt-1">พื้นที่อัปโหลดรูปภาพอิสระ (ไม่เกี่ยวกับบิล)</p>
           </div>
           <label class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl text-xs font-bold shadow cursor-pointer transition-all">
-            + อัปโหลดรูปภาพ <input type="file" id="globalGalleryUpload" accept="image/*" multiple class="hidden" onchange="uploadGlobalImages(this)">
+            + อัปโหลดรูปเพิ่ม <input type="file" id="globalGalleryUpload" accept="image/*" multiple class="hidden" onchange="uploadGlobalImages(this)">
           </label>
         </div>
-        <div id="globalGalleryContainer" class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
-          <!-- รูปภาพทั้งหมดจะแสดงที่นี่ -->
+        <div id="globalAlbumContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2"></div>
+      </div>
+
+      <!-- อัลบั้มรูปจากบิลงานซ่อม -->
+      <div class="bg-gray-900 p-4 md:p-6 rounded-2xl shadow-xl border border-gray-800 space-y-4">
+        <div class="border-b border-gray-800 pb-3">
+          <h2 class="text-xl font-bold text-cyan-400">📁 อัลบั้มรูปภาพจากบิลงานซ่อมทั้งหมด</h2>
+          <p class="text-xs text-gray-400 mt-1">อัลบั้มแยกตามเลขที่บิลและชื่อลูกค้าพร้อมรูปตัวอย่าง</p>
         </div>
+        <div id="repairAlbumContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2"></div>
       </div>
     </div>
 
@@ -254,7 +261,7 @@
     <div id="imageModal" class="fixed inset-0 bg-black bg-opacity-80 z-[60] hidden flex-col justify-center items-center p-4">
       <div class="w-full max-w-lg bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div class="flex justify-between items-center p-4 border-b border-gray-800 bg-gray-800">
-          <h3 class="font-bold text-lg text-white">📸 แกลลอรีรูปภาพงานซ่อม</h3>
+          <h3 id="modalTitle" class="font-bold text-lg text-white">📸 อัลบั้มรูปภาพ</h3>
           <button onclick="closeImageModal()" class="text-rose-400 font-bold px-3 py-1 bg-rose-500/10 border border-rose-500/20 rounded-lg">✕ ปิด</button>
         </div>
         <div id="modalImagesContainer" class="p-4 overflow-y-auto space-y-6 flex-1 bg-gray-900"></div>

@@ -56,34 +56,86 @@ async function loadDashboardStats() {
   }
 }
 
-// ----------------- คลังรูปภาพอิสระ (Gallery) -----------------
+// ----------------- อัลบั้มรูปภาพ (Gallery & Repair Albums) -----------------
 async function loadGlobalGallery() {
   try {
+    // 1. โหลดอัลบั้มคลังรูปภาพทั่วไป
     const res = await fetch('/api/gallery');
     const images = await res.json();
-    const container = document.getElementById('globalGalleryContainer');
-    container.innerHTML = '';
+    const albumContainer = document.getElementById('globalAlbumContainer');
     
     if (images.length === 0) {
-      container.innerHTML = `<div class="col-span-full text-center text-gray-500 py-10">ยังไม่มีรูปภาพในระบบ</div>`;
+      albumContainer.innerHTML = `<div class="col-span-full text-center text-gray-500 py-6 bg-gray-800 rounded-xl">ยังไม่มีรูปภาพในคลังทั่วไป</div>`;
+    } else {
+      let previewImgs = images.slice(0, 3).map(p => `<img src="${p}" class="w-16 h-16 object-cover rounded-lg border border-gray-700 bg-gray-900">`).join('');
+      albumContainer.innerHTML = `
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg flex flex-col justify-between space-y-3">
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <h3 class="font-bold text-purple-300 text-sm">📁 อัลบั้ม: รูปภาพทั่วไป</h3>
+              <span class="bg-purple-500/20 text-purple-300 text-[10px] px-2 py-0.5 rounded-full font-bold">${images.length} รูป</span>
+            </div>
+            <div class="flex gap-2 overflow-x-auto py-1">${previewImgs}</div>
+          </div>
+          <button onclick='openGlobalAlbumModal(${JSON.stringify(images)})' class="w-full bg-purple-600 hover:bg-purple-500 text-white py-2 rounded-xl text-xs font-bold shadow transition-all">📂 เปิดดูอัลบั้มและจัดการ</button>
+        </div>
+      `;
+    }
+
+    // 2. โหลดอัลบั้มรูปจากบิลงานซ่อม
+    const resRepairs = await fetch('/api/repairs');
+    const repairs = await resRepairs.json();
+    const repairAlbumContainer = document.getElementById('repairAlbumContainer');
+    repairAlbumContainer.innerHTML = '';
+    
+    const billsWithImages = repairs.filter(r => r.image_path && r.image_path.trim() !== '');
+    if (billsWithImages.length === 0) {
+      repairAlbumContainer.innerHTML = `<div class="col-span-full text-center text-gray-500 py-6 bg-gray-800 rounded-xl">ยังไม่มีรูปภาพในบิลงานซ่อม</div>`;
       return;
     }
 
-    images.forEach((path, idx) => {
-      const filename = path.split('/').pop();
-      container.innerHTML += `
-        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3 shadow-md flex flex-col items-center space-y-2">
-          <img src="${path}" class="w-full h-36 object-contain rounded-xl bg-gray-900 border border-gray-700" alt="Gallery Image">
-          <div class="grid grid-cols-2 gap-1 w-full pt-1">
-            <a href="${path}" download="gallery-${idx}.png" target="_blank" class="bg-cyan-600 hover:bg-cyan-500 text-white text-center py-1.5 rounded-xl text-xs font-bold shadow transition-all">📥 โหลด</a>
-            <button onclick="deleteGalleryImage('${filename}')" class="bg-rose-600 hover:bg-rose-500 text-white py-1.5 rounded-xl text-xs font-bold shadow transition-all">🗑️ ลบรูป</button>
+    billsWithImages.forEach(item => {
+      const paths = item.image_path.split(',');
+      let previewImgs = paths.slice(0, 3).map(p => `<img src="${p}" class="w-16 h-16 object-cover rounded-lg border border-gray-700 bg-gray-900">`).join('');
+      repairAlbumContainer.innerHTML += `
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg flex flex-col justify-between space-y-3">
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <h3 class="font-bold text-cyan-400 text-sm">${item.bill_no}</h3>
+              <span class="bg-cyan-500/20 text-cyan-300 text-[10px] px-2 py-0.5 rounded-full font-bold">${paths.length} รูป</span>
+            </div>
+            <p class="text-xs text-gray-300 mb-2 truncate">ลูกค้า: ${item.customer_name} (${item.date})</p>
+            <div class="flex gap-2 overflow-x-auto py-1">${previewImgs}</div>
           </div>
+          <button onclick='openImageModal("${item.image_path}", "📁 อัลบั้มบิล: ${item.bill_no} (${item.customer_name})")' class="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-2 rounded-xl text-xs font-bold shadow transition-all">📂 เปิดดูอัลบั้มนี้</button>
         </div>
       `;
     });
   } catch(e) {
-    console.error('Failed to load gallery', e);
+    console.error('Failed to load albums', e);
   }
+}
+
+function openGlobalAlbumModal(images) {
+  const container = document.getElementById('modalImagesContainer');
+  document.getElementById('modalTitle').innerText = "📸 อัลบั้มรูปภาพทั่วไป (จัดการระบบ)";
+  container.innerHTML = '';
+  
+  images.forEach((path) => {
+    const filename = path.split('/').pop();
+    container.innerHTML += `
+      <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3 shadow-md flex flex-col items-center space-y-2">
+        <img src="${path}" class="w-full max-h-64 object-contain rounded-xl border border-gray-700 bg-gray-900" alt="Gallery Image">
+        <div class="grid grid-cols-2 gap-2 w-full pt-1">
+          <a href="${path}" download="${filename}" target="_blank" class="bg-cyan-600 hover:bg-cyan-500 text-white text-center py-2 rounded-xl text-xs font-bold shadow transition-all">📥 ดาวน์โหลด</a>
+          <button onclick="deleteGalleryImage('${filename}')" class="bg-rose-600 hover:bg-rose-500 text-white py-2 rounded-xl text-xs font-bold shadow transition-all">🗑️ ลบรูป</button>
+        </div>
+      </div>
+    `;
+  });
+  const modal = document.getElementById('imageModal');
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
 }
 
 async function uploadGlobalImages(inputElem) {
@@ -94,17 +146,18 @@ async function uploadGlobalImages(inputElem) {
   }
   const res = await fetch('/api/gallery', { method: 'POST', body: formData });
   if (res.ok) {
-    alert('อัปโหลดรูปลงคลังสำเร็จ!');
+    alert('อัปโหลดรูปลงอัลบั้มทั่วไปสำเร็จ!');
     inputElem.value = '';
     loadGlobalGallery();
   }
 }
 
 async function deleteGalleryImage(filename) {
-  if (!confirm('ต้องการลบรูปภาพนี้ออกจากคลังใช่หรือไม่?')) return;
+  if (!confirm('ต้องการลบรูปภาพนี้ออกจากอัลบั้มใช่หรือไม่?')) return;
   const res = await fetch(`/api/gallery/${filename}`, { method: 'DELETE' });
   if (res.ok) {
     loadGlobalGallery();
+    closeImageModal();
   }
 }
 // -----------------------------------------------------------
@@ -373,8 +426,8 @@ async function loadHistory() {
     cardsContainer.innerHTML = '';
 
     data.forEach(item => {
-      let imagesHTMLDesktop = item.image_path ? `<button onclick="openImageModal('${item.image_path}')" class="text-xs bg-purple-500/10 text-purple-400 border border-purple-500/30 px-2.5 py-1 rounded-lg font-bold hover:bg-purple-500/20">ดูรูป (${item.image_path.split(',').length})</button>` : '-';
-      let imagesHTMLMobile = item.image_path ? `<button onclick="openImageModal('${item.image_path}')" class="text-[11px] bg-purple-500/10 text-purple-400 border border-purple-500/30 px-1.5 py-1 rounded-lg font-bold">รูป (${item.image_path.split(',').length})</button>` : `<span class="text-xs text-center text-gray-500">ไม่มีรูป</span>`;
+      let imagesHTMLDesktop = item.image_path ? `<button onclick='openImageModal("${item.image_path}", "📁 อัลบั้มบิล: ${item.bill_no}")' class="text-xs bg-purple-500/10 text-purple-400 border border-purple-500/30 px-2.5 py-1 rounded-lg font-bold hover:bg-purple-500/20">ดูรูป (${item.image_path.split(',').length})</button>` : '-';
+      let imagesHTMLMobile = item.image_path ? `<button onclick='openImageModal("${item.image_path}", "📁 อัลบั้มบิล: ${item.bill_no}")' class="text-[11px] bg-purple-500/10 text-purple-400 border border-purple-500/30 px-1.5 py-1 rounded-lg font-bold">รูป (${item.image_path.split(',').length})</button>` : `<span class="text-xs text-center text-gray-500">ไม่มีรูป</span>`;
       
       const currentStatus = item.status || 'กำลังซ่อม';
       let statusColor = currentStatus === 'ซ่อมเสร็จ' ? 'text-emerald-400' : (currentStatus === 'รออะไหล่' ? 'text-rose-400' : 'text-amber-400');
@@ -439,8 +492,9 @@ async function loadHistory() {
   }
 }
 
-function openImageModal(imagePathsStr) {
+function openImageModal(imagePathsStr, titleText = "📸 อัลบั้มรูปภาพ") {
   const container = document.getElementById('modalImagesContainer');
+  document.getElementById('modalTitle').innerText = titleText;
   container.innerHTML = '';
   const paths = imagePathsStr.split(',');
   paths.forEach((path, index) => {
@@ -449,7 +503,7 @@ function openImageModal(imagePathsStr) {
         <span class="text-xs font-bold text-gray-300 mb-2 bg-gray-900 px-3 py-1 rounded-full border border-gray-700">รูปที่ ${index + 1} / ${paths.length}</span>
         <img src="${path}" class="w-full max-h-72 object-contain rounded-xl border border-gray-700 bg-gray-900 mb-3" alt="Repair Image">
         <a href="${path}" download="repair-photo-${index+1}.png" target="_blank" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-2 rounded-xl font-bold shadow flex justify-center items-center gap-2 transition-all">
-          📥 บันทึกรูปลงเครื่อง
+          📥 ดาวน์โหลดรูปลงเครื่อง
         </a>
       </div>
     `;
@@ -499,7 +553,7 @@ async function editRepair(id) {
       addItemRow();
       const rows = document.querySelectorAll('#itemsTable tr:not(#laborRow)');
       const currentRow = rows[rows.length - 1];
-      let rawName = data.items[i].item_name; // เช่น "(IC) LM339" หรือ "LM339"
+      let rawName = data.items[i].item_name;
       
       let parsedType = "";
       let parsedName = rawName;
@@ -524,7 +578,7 @@ async function editRepair(id) {
   alert(`ดึงข้อมูลบิล ${data.bill_no} มาแก้ไขเรียบร้อยแล้ว`);
   window.scrollTo(0, 0);
   const submitBtn = document.querySelector('button[type="submit"]');
-  submitBtn.innerText = "อัปเดตบิลซ่อม";
+  submitBtn.innerText = "💾 บันทึก/อัปเดตบิล";
   submitBtn.classList.replace('bg-emerald-600', 'bg-amber-600');
 }
 
@@ -536,12 +590,12 @@ function resetForm() {
   addItemRow();
   document.getElementById('fileCount').innerText = 'ยังไม่ได้เลือกรูป';
   const submitBtn = document.querySelector('button[type="submit"]');
-  submitBtn.innerText = "บันทึกบิลซ่อม";
+  submitBtn.innerText = "💾 บันทึก/อัปเดตบิล";
   submitBtn.classList.replace('bg-amber-600', 'bg-emerald-600');
 }
 
-document.getElementById('repairForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
+// ฟังก์ชันบันทึกข้อมูลเบื้องหลัง (ไม่ต้องรีเซ็ตฟอร์ม คงหน้าจอไว้)
+async function saveRepairDataSilent() {
   const formData = new FormData();
   const editId = document.getElementById('edit_repair_id').value;
   
@@ -586,10 +640,26 @@ document.getElementById('repairForm').addEventListener('submit', async (e) => {
 
   const res = await fetch(url, { method: method, body: formData });
   if (res.ok) {
-    alert(editId ? 'อัปเดตบิลสำเร็จ!' : 'บันทึกบิลสำเร็จ!');
-    resetForm();
+    const result = await res.json();
+    if (!editId && result.id) {
+      document.getElementById('edit_repair_id').value = result.id; // ล็อก ID ไว้ให้อัปเดตรอบต่อไปทันที
+    }
     loadHistory();
     loadDashboardStats();
+    return true;
+  }
+  return false;
+}
+
+// กดปุ่มบันทึกปกติ (คงหน้าจอไว้ไม่รีเซ็ต)
+document.getElementById('repairForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const success = await saveRepairDataSilent();
+  if (success) {
+    alert('บันทึก/อัปเดตข้อมูลบิลเรียบร้อยแล้ว (คุณสามารถแก้ไขต่อหรือกดดาวน์โหลดรูปได้ทันที)');
+    const submitBtn = document.querySelector('button[type="submit"]');
+    submitBtn.innerText = "💾 บันทึก/อัปเดตบิล";
+    submitBtn.classList.replace('bg-emerald-600', 'bg-amber-600');
   }
 });
 
@@ -607,8 +677,11 @@ async function deleteRepair(id) {
   }
 }
 
-// ----------------- แก้ไขฟังก์ชันดาวน์โหลดรูปบิลให้สมบูรณ์ (ไม่ซ้ำซ้อน) -----------------
-function downloadBillImage() {
+// ----------------- ฟังก์ชันดาวน์โหลดรูปบิล (บันทึกอัตโนมัติก่อนโหลด + รองรับข้อความยาวหลายบรรทัด) -----------------
+async function downloadBillImage() {
+  // บันทึกหรืออัปเดตข้อมูลลงฐานข้อมูลอัตโนมัติก่อนโหลดรูป
+  await saveRepairDataSilent();
+
   const billArea = document.getElementById('billArea');
   const hideElements = billArea.querySelectorAll('.hide-on-print');
   hideElements.forEach(el => el.style.display = 'none');
@@ -633,17 +706,17 @@ function downloadBillImage() {
 
         const sDesc = document.createElement('div');
         sDesc.innerText = laborDesc.value;
-        sDesc.style.fontSize = '12px'; sDesc.style.fontWeight = 'bold'; sDesc.style.color = '#1e40af'; sDesc.style.padding = '0 4px'; sDesc.style.height = '28px'; sDesc.style.lineHeight = '28px';
+        sDesc.style.fontSize = '12px'; sDesc.style.fontWeight = 'bold'; sDesc.style.color = '#1e40af'; sDesc.style.padding = '4px'; sDesc.style.minHeight = '28px'; sDesc.style.wordBreak = 'break-word';
         tdDesc.insertBefore(sDesc, laborDesc); laborDesc.style.display = 'none';
 
         const sQty = document.createElement('div');
         sQty.innerText = qtyIn.value;
-        sQty.style.fontSize = '12px'; sQty.style.textAlign = 'center'; sQty.style.height = '28px'; sQty.style.lineHeight = '28px';
+        sQty.style.fontSize = '12px'; sQty.style.textAlign = 'center'; sQty.style.padding = '4px'; sQty.style.minHeight = '28px';
         tdQty.insertBefore(sQty, qtyIn); qtyIn.style.display = 'none';
 
         const sPrice = document.createElement('div');
         sPrice.innerText = priceIn.value;
-        sPrice.style.fontSize = '12px'; sPrice.style.textAlign = 'right'; sPrice.style.padding = '0 4px'; sPrice.style.height = '28px'; sPrice.style.lineHeight = '28px';
+        sPrice.style.fontSize = '12px'; sPrice.style.textAlign = 'right'; sPrice.style.padding = '4px'; sPrice.style.minHeight = '28px';
         tdPrice.insertBefore(sPrice, priceIn); priceIn.style.display = 'none';
 
         itemReplacedData.push({ el: laborDesc, span: sDesc }, { el: qtyIn, span: sQty }, { el: priceIn, span: sPrice });
@@ -657,9 +730,9 @@ function downloadBillImage() {
       const tempSpan = document.createElement('div');
       tempSpan.innerText = combinedText;
       tempSpan.style.fontSize = '12px';
-      tempSpan.style.padding = '0 4px';
-      tempSpan.style.height = '28px';
-      tempSpan.style.lineHeight = '28px';
+      tempSpan.style.padding = '4px';
+      tempSpan.style.minHeight = '28px';
+      tempSpan.style.wordBreak = 'break-word';
       
       parentTd.insertBefore(tempSpan, select);
       select.style.display = 'none';
@@ -670,7 +743,7 @@ function downloadBillImage() {
         const qtyTd = qtyInput.closest('td');
         const qSpan = document.createElement('div');
         qSpan.innerText = qtyInput.value;
-        qSpan.style.fontSize = '12px'; qSpan.style.textAlign = 'center'; qSpan.style.height = '28px'; qSpan.style.lineHeight = '28px';
+        qSpan.style.fontSize = '12px'; qSpan.style.textAlign = 'center'; qSpan.style.padding = '4px'; qSpan.style.minHeight = '28px';
         qtyTd.insertBefore(qSpan, qtyInput); qtyInput.style.display = 'none';
         itemReplacedData.push({ el: qtyInput, span: qSpan });
       }
@@ -679,7 +752,7 @@ function downloadBillImage() {
         const priceTd = priceInput.closest('td');
         const pSpan = document.createElement('div');
         pSpan.innerText = priceInput.value;
-        pSpan.style.fontSize = '12px'; pSpan.style.textAlign = 'right'; pSpan.style.padding = '0 4px'; pSpan.style.height = '28px'; pSpan.style.lineHeight = '28px';
+        pSpan.style.fontSize = '12px'; pSpan.style.textAlign = 'right'; pSpan.style.padding = '4px'; pSpan.style.minHeight = '28px';
         priceTd.insertBefore(pSpan, priceInput); priceInput.style.display = 'none';
         itemReplacedData.push({ el: priceInput, span: pSpan });
       }
