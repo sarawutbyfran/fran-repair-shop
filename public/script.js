@@ -471,6 +471,7 @@ async function togglePay(id, status) {
   loadDashboardStats();
 }
 
+// ----------------- แก้ไขฟังก์ชันกดแก้ไขบิล (แยก ชนิด และ ชื่ออะไหล่ ออกจากกันอย่างถูกต้อง) -----------------
 async function editRepair(id) {
   const res = await fetch(`/api/repairs/${id}`);
   const data = await res.json();
@@ -499,16 +500,25 @@ async function editRepair(id) {
       addItemRow();
       const rows = document.querySelectorAll('#itemsTable tr:not(#laborRow)');
       const currentRow = rows[rows.length - 1];
-      const partName = data.items[i].item_name;
+      let rawName = data.items[i].item_name; // เช่น "(IC) LM339" หรือ "LM339"
       
-      currentRow.querySelector('.item-search').value = partName;
+      let parsedType = "";
+      let parsedName = rawName;
+
+      // แยกรูปแบบ (ชนิด) ออกจากชื่ออะไหล่
+      const match = rawName.match(/^\((.*?)\)\s*(.*)$/);
+      if (match) {
+        parsedType = match[1];
+        parsedName = match[2];
+      } else {
+        const matchedPart = globalPartsData.find(p => p.part_name === rawName);
+        if (matchedPart) parsedType = matchedPart.part_type;
+      }
+      
+      currentRow.querySelector('.item-type-select').value = parsedType;
+      currentRow.querySelector('.item-search').value = parsedName;
       currentRow.querySelector('.item-qty').value = data.items[i].quantity;
       currentRow.querySelector('.item-price').value = data.items[i].unit_price;
-
-      const matchedPart = globalPartsData.find(p => p.part_name === partName);
-      if (matchedPart) {
-        currentRow.querySelector('select').value = matchedPart.part_type;
-      }
     }
   }
   calculateTotal();
@@ -560,13 +570,15 @@ document.getElementById('repairForm').addEventListener('submit', async (e) => {
     price: document.querySelector('#laborRow .item-price').value || 0
   });
 
+  // บันทึกเฉพาะชื่ออะไหล่บริสุทธิ์ (ระบบจะจัดรูปแบบตอนแสดงผลหรือดาวน์โหลด)
   document.querySelectorAll('#itemsTable tr:not(#laborRow)').forEach(row => {
     const type = row.querySelector('.item-type-select')?.value;
     const name = row.querySelector('.item-search')?.value;
     const qty = row.querySelector('.item-qty')?.value;
     const price = row.querySelector('.item-price')?.value;
     if (name) {
-      const combinedName = type ? `(${type}) ${name}` : name;
+      const cleanName = name.replace(/^\(.*?\)\s*/, ''); // ตัดวงเล็บชนิดออกถ้ามีค้างอยู่
+      const combinedName = type ? `(${type}) ${cleanName}` : cleanName;
       items.push({ name: combinedName, qty, price });
     }
   });
@@ -598,13 +610,12 @@ async function deleteRepair(id) {
   }
 }
 
-// ----------------- แก้ไขฟังก์ชันดาวน์โหลดรูปบิลให้แสดงผลข้อมูลครบถ้วน -----------------
+// ----------------- ฟังก์ชันดาวน์โหลดรูปบิล (แสดงผลเรียบร้อยและไม่ซ้ำซ้อน) -----------------
 function downloadBillImage() {
   const billArea = document.getElementById('billArea');
   const hideElements = billArea.querySelectorAll('.hide-on-print');
   hideElements.forEach(el => el.style.display = 'none');
 
-  // 1. จัดการแปลงแถวตารางรายการอะไหล่ให้รวม (ชนิด) + ชื่อ และดึงจำนวน/หน่วยละมาแสดงผลเป็นตัวอักษร
   const itemRows = document.querySelectorAll('#itemsTable tr');
   const itemReplacedData = [];
   
@@ -615,7 +626,6 @@ function downloadBillImage() {
     const priceInput = row.querySelector('.item-price');
     
     if (idx === 0) {
-      // แถวแรก (ค่าแรง/รายการซ่อมหลัก)
       const laborDesc = row.querySelector('#labor_desc');
       const qtyIn = row.querySelector('.item-qty');
       const priceIn = row.querySelector('.item-price');
@@ -642,9 +652,8 @@ function downloadBillImage() {
         itemReplacedData.push({ el: laborDesc, span: sDesc }, { el: qtyIn, span: sQty }, { el: priceIn, span: sPrice });
       }
     } else if (select && input && input.value.trim() !== '') {
-      // แถวรายการอะไหล่
       const typeVal = select.value;
-      const nameVal = input.value;
+      let nameVal = input.value.replace(/^\(.*?\)\s*/, '');
       const combinedText = typeVal ? `(${typeVal}) ${nameVal}` : nameVal;
       
       const parentTd = input.closest('td');
@@ -680,7 +689,6 @@ function downloadBillImage() {
     }
   });
 
-  // 2. จัดการข้อมูลส่วนหัวบิล (ชื่อลูกค้า ที่อยู่ เลขที่ วันที่)
   const inputs = billArea.querySelectorAll('input:not([type="hidden"]):not(.item-search):not(.item-qty):not(.item-price), select:not(.item-type-select)');
   const replacements = [];
   
