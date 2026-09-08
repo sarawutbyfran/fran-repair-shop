@@ -21,33 +21,26 @@
       <button onclick="switchTab('inventoryTab')" id="btn-inventoryTab" class="flex-1 py-2 px-1 md:px-4 rounded font-bold text-xs md:text-sm bg-gray-200 text-gray-700 hover:bg-gray-300">⚙️ หลังบ้าน (คลัง)</button>
     </div>
 
-    <!-- ================= 1. หน้าทำบิล (เหมือนเดิม) ================= -->
+    <!-- ================= 1. หน้าทำบิล ================= -->
     <div id="tab-billTab" class="tab-content">
       <form id="repairForm" class="bg-white p-4 md:p-6 rounded-lg shadow-md border border-gray-300 space-y-4">
         <input type="hidden" id="edit_repair_id" value="">
-        <!-- ================= เริ่มต้นส่วนบิลที่จะถูกแคปเจอร์ ================= -->
         <div id="billArea" class="bg-white p-4 md:p-6 border-2 border-cyan-400 rounded-lg relative pb-6 space-y-6">
           
-          <!-- ส่วนหัว: โลโก้ และ ป้ายบิล -->
-          <!-- ส่วนหัว: โลโก้ และ ป้ายบิล -->
           <div class="flex justify-between items-start md:items-center border-b-2 border-cyan-200 pb-4">
             <div class="flex items-center gap-3">
-              <!-- 1. ปรับโลโก้ให้เตี้ยลง (h-12) และสมมาตร (w-auto) -->
               <img src="logo.png" alt="Logo" class="h-12 md:h-14 w-auto object-contain" onerror="this.style.display='none'">
               <div>
                 <h1 class="text-xl md:text-2xl font-extrabold text-gray-800 leading-tight">By Fran Circuit</h1>
                 <p class="text-[10px] md:text-[11px] text-gray-600 mt-1">ที่อยู่ 3/10 หมู่ 5 ทุ่งบางกระแบล ต.นาป่า อ.เมือง จ.ชลบุรี 20000</p>
               </div>
             </div>
-            <!-- 2. ป้ายบิลเงินสด (ชิดขวาเสมอ) -->
             <div class="bg-cyan-100 px-5 md:px-6 py-2 rounded-lg border-2 border-cyan-400 flex items-center justify-center whitespace-nowrap ml-2">
               <h2 class="text-lg md:text-xl font-bold text-cyan-900 tracking-wide">บิลเงินสด</h2>
             </div>
           </div>
 
-          <!-- 3 & 4. ส่วนข้อมูลลูกค้า (เอากรอบออก เปลี่ยนเป็นเส้นใต้ ล็อคซ้ายขวา) -->
           <div class="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
-            <!-- ฝั่งซ้าย: ลูกค้า -->
             <div class="space-y-3">
               <div class="flex items-end gap-2">
                 <label class="font-bold w-16 text-xs text-gray-700 pb-1">ชื่อลูกค้า:</label> 
@@ -58,7 +51,6 @@
                 <input type="text" id="customer_address" class="flex-1 border-b border-gray-400 p-1 outline-none text-xs bg-transparent">
               </div>
             </div>
-            <!-- ฝั่งขวา: เลขที่บิล -->
             <div class="space-y-3">
               <div class="flex items-end gap-2">
                 <span class="font-bold w-20 text-xs text-gray-700 pb-1">เลขที่/No.:</span> 
@@ -72,7 +64,6 @@
             </div>
           </div>
 
-          <!-- ข้อมูลงานซ่อม (หลังบ้าน) ซ่อนตอนพิมพ์ -->
           <div class="bg-orange-50 p-3 rounded border border-orange-300 text-xs space-y-2 hide-on-print mt-4">
             <div class="flex justify-between items-center border-b border-orange-200 pb-1">
               <h3 class="font-extrabold text-orange-900">ข้อมูลงานซ่อม (ตั้งค่าบิล)</h3>
@@ -88,7 +79,6 @@
             </div>
           </div>
 
-          <!-- ตารางรายการ -->
           <div class="mt-4">
             <table class="w-full text-sm print-border">
               <thead><tr class="bg-cyan-50"><th class="p-1.5 w-10 text-center">ลำดับ</th><th class="p-1.5 text-center">รายการ (Descriptions)</th><th class="p-1.5 w-16 text-center">จำนวน</th><th class="p-1.5 w-20 text-center">หน่วยละ</th><th class="p-1.5 w-24 text-center">จำนวนเงิน</th><th class="p-1.5 w-8 text-center hide-on-print">ลบ</th></tr></thead>
@@ -107,7 +97,6 @@
             </div>
           </div>
         </div>
-        <!-- ================= สิ้นสุดส่วนบิล ================= -->
 
         <div class="flex flex-wrap gap-2 pt-2">
           <button type="submit" class="bg-green-600 text-white px-6 py-2.5 rounded font-bold hover:bg-green-700 shadow text-sm">บันทึกบิลซ่อม</button>
@@ -117,25 +106,84 @@
       </form>
     </div>
 
-    <!-- 2. หน้าประวัติงานซ่อม (ซ่อนไว้ก่อน) -->
-    <!-- ... (เนื้อหาหน้าประวัติ และ ระบบหลังบ้าน คงเดิมตามที่คุณมีอยู่ได้เลยครับ) ... -->
-    <!-- แค่เลื่อนลงไปแก้ไข Modal ด้านล่างสุด -->
-
-    <!-- ================= 6. Modal ดูรูปภาพงานซ่อม (ออกแบบให้เลื่อนและโหลดง่ายในมือถือ) ================= -->
-    <div id="imageModal" class="fixed inset-0 bg-black bg-opacity-80 z-[60] hidden flex-col justify-center items-center p-4">
-      <div class="w-full max-w-lg bg-white rounded-lg shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div class="flex justify-between items-center p-4 border-b bg-gray-50">
-          <h3 class="font-bold text-lg text-gray-800">📸 แกลลอรีรูปภาพ</h3>
-          <button onclick="closeImageModal()" class="text-red-500 font-bold px-3 py-1 bg-red-100 rounded hover:bg-red-200">✕ ปิด</button>
+    <!-- ================= 2. หน้าประวัติงานซ่อม ================= -->
+    <div id="tab-historyTab" class="tab-content hidden">
+      <div class="bg-white p-4 md:p-6 rounded-lg shadow-md border border-gray-300 space-y-4">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-2">
+          <div class="text-center md:text-left">
+            <h2 class="text-xl font-bold text-blue-800">ประวัติงานซ่อม / เช็คสถานะ</h2>
+            <p class="text-sm font-bold text-red-600 mt-1">ยอดค้างชำระ: <span id="debtSummary">0.00</span> บาท</p>
+          </div>
+          <div class="grid grid-cols-2 md:flex gap-2 text-sm w-full md:w-auto">
+            <select id="filter_sender" class="border border-blue-300 p-1.5 rounded bg-blue-50 text-xs w-full" onchange="loadHistory()">
+              <option value="">- ผู้ส่งงาน -</option><option value="หน้าร้าน">หน้าร้าน</option><option value="พี่พล">พี่พล</option><option value="พี่โจ้">พี่โจ้</option><option value="พี่แมน">พี่แมน</option><option value="พี่โอม">พี่โอม</option><option value="พี่นพ">พี่นพ</option>
+            </select>
+            <select id="filter_status" class="border border-blue-300 p-1.5 rounded bg-blue-50 text-xs w-full" onchange="loadHistory()">
+              <option value="">- สถานะ -</option><option value="กำลังซ่อม">กำลังซ่อม</option><option value="รออะไหล่">รออะไหล่</option><option value="ซ่อมเสร็จ">ซ่อมเสร็จ</option>
+            </select>
+            <select id="filter_pay" class="col-span-2 border border-blue-300 p-1.5 rounded bg-blue-50 font-bold text-red-600 text-xs w-full" onchange="loadHistory()">
+              <option value="0" selected>✕ ค้างชำระ</option><option value="1">✓ จ่ายแล้ว</option><option value="">- สถานะจ่ายเงินทั้งหมด -</option>
+            </select>
+          </div>
         </div>
-        <!-- พื้นที่เลื่อนดูรูป (Scrollable) -->
-        <div id="modalImagesContainer" class="p-4 overflow-y-auto space-y-6 flex-1 bg-gray-100">
-          <!-- รูปภาพจะแทรกที่นี่ -->
+        
+        <div class="hidden md:block overflow-x-auto">
+          <table class="w-full text-left text-sm border-collapse">
+            <thead>
+              <tr class="bg-blue-50 border-b">
+                <th class="p-2 border">เลขที่บิล / รายการซ่อม</th><th class="p-2 border">ลูกค้า</th><th class="p-2 border">ผู้ส่ง/สถานะ</th><th class="p-2 border text-right">ยอดรวม</th><th class="p-2 border text-center">รูปถ่าย</th><th class="p-2 border text-center">สถานะเงิน</th><th class="p-2 border text-center">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="historyTable"></tbody>
+          </table>
+        </div>
+        <div id="historyCards" class="block md:hidden space-y-3"></div>
+      </div>
+    </div>
+
+    <!-- ================= 3. ระบบหลังบ้าน (คลัง) ================= -->
+    <div id="tab-inventoryTab" class="tab-content hidden">
+      <div class="bg-white p-4 md:p-6 rounded-lg shadow-md border border-gray-300 space-y-4">
+        <h2 class="text-xl font-bold text-orange-800">ระบบหลังบ้าน: จัดการคลังอะไหล่</h2>
+        <form id="addPartForm" class="grid grid-cols-2 md:grid-cols-7 gap-2 bg-orange-50 p-3 border border-orange-200 rounded text-xs">
+          <input type="hidden" id="edit_part_id" value="">
+          <div class="col-span-2 md:col-span-1">
+            <label class="font-bold">ชนิดอุปกรณ์</label>
+            <select id="part_type" class="w-full border p-1 rounded bg-white" required><option value="">- เลือกชนิด -</option><option value="IC">IC</option><option value="MOSFET">MOSFET</option><option value="Transistor">Transistor</option><option value="Resistor">Resistor</option><option value="Capacitor">Capacitor</option><option value="Diode">Diode</option><option value="Module/Board">Module/Board</option><option value="อื่นๆ">อื่นๆ</option></select>
+          </div>
+          <div class="col-span-2 md:col-span-1"><label class="font-bold">รายการ/เบอร์</label><input type="text" id="part_name" class="w-full border p-1 rounded bg-white" required></div>
+          <div><label class="font-bold">ราคาทุน</label><input type="number" id="cost_price" class="w-full border p-1 rounded bg-white" value="0"></div>
+          <div><label class="font-bold">ราคาขาย</label><input type="number" id="sale_price" class="w-full border p-1 rounded bg-white" value="0"></div>
+          <div class="col-span-2 md:col-span-1"><label class="font-bold">แหล่งซื้อ</label><input type="text" id="part_source" class="w-full border p-1 rounded bg-white"></div>
+          <div class="flex items-end gap-1 col-span-2 md:col-span-2">
+            <button type="submit" id="partSubmitBtn" class="w-full bg-orange-600 text-white font-bold py-1.5 rounded hover:bg-orange-700 shadow text-xs">บันทึก</button>
+            <button type="button" onclick="resetPartForm()" class="bg-gray-400 text-white px-3 py-1.5 rounded text-xs">ยกเลิก</button>
+          </div>
+        </form>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold">กรองดูตามชนิด:</span>
+          <select id="filter_part_type" class="border p-1 rounded text-xs bg-gray-50" onchange="loadPartsDatabase()"><option value="">- ทุกชนิดอุปกรณ์ -</option><option value="IC">IC</option><option value="MOSFET">MOSFET</option><option value="Transistor">Transistor</option><option value="Resistor">Resistor</option><option value="Capacitor">Capacitor</option><option value="Diode">Diode</option><option value="Module/Board">Module/Board</option><option value="อื่นๆ">อื่นๆ</option></select>
+        </div>
+        <div class="overflow-x-auto h-96 overflow-y-auto">
+          <table class="w-full text-left text-sm border-collapse border border-gray-200">
+            <thead class="bg-gray-100 sticky top-0"><tr><th class="p-2 border">ชนิด</th><th class="p-2 border">รายการ</th><th class="p-2 border text-right">ทุน</th><th class="p-2 border text-right">ขาย</th><th class="p-2 border text-right">กำไร</th><th class="p-2 border">แหล่งซื้อ</th><th class="p-2 border text-center">จัดการ</th></tr></thead>
+            <tbody id="partsInventoryTable"></tbody>
+          </table>
         </div>
       </div>
     </div>
 
-    <!-- ================= 5. Modal โชว์รูปบิลสำหรับกดค้างเพื่อบันทึก ================= -->
+    <!-- Modals -->
+    <div id="imageModal" class="fixed inset-0 bg-black bg-opacity-80 z-[60] hidden flex-col justify-center items-center p-4">
+      <div class="w-full max-w-lg bg-white rounded-lg shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="flex justify-between items-center p-4 border-b bg-gray-50">
+          <h3 class="font-bold text-lg text-gray-800">📸 แกลลอรีรูปภาพ</h3>
+          <button onclick="closeImageModal()" class="text-red-500 font-bold px-3 py-1 bg-red-100 rounded">✕ ปิด</button>
+        </div>
+        <div id="modalImagesContainer" class="p-4 overflow-y-auto space-y-6 flex-1 bg-gray-100"></div>
+      </div>
+    </div>
+
     <div id="billPreviewModal" class="fixed inset-0 bg-black bg-opacity-95 z-[9999] hidden flex-col justify-center items-center p-4">
       <div class="flex justify-between items-center w-full max-w-md mb-3">
         <p class="text-yellow-300 text-sm font-bold animate-bounce">👉 แตะค้างที่รูปภาพเพื่อบันทึก</p>
@@ -146,7 +194,7 @@
       </div>
     </div>
 
-  </div> <!-- End Main Container -->
+  </div>
 
   <script src="script.js"></script>
   <script>

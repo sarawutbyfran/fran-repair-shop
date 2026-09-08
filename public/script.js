@@ -35,28 +35,22 @@ function updateLaborDesc() {
   document.getElementById('labor_desc').value = desc;
 }
 
+// เพิ่มแถวรายการ พร้อมระบบพิมพ์ค้นหาเบอร์อะไหล่
 function addItemRow() {
   const tbody = document.getElementById('itemsTable');
   const tr = document.createElement('tr');
   
-  const uniqueTypes = [...new Set(globalPartsData.map(p => p.part_type).filter(t => t))];
-  let typeOptions = `<option value="">- เลือกชนิด -</option>`;
-  uniqueTypes.forEach(t => { typeOptions += `<option value="${t}">${t}</option>`; });
-
   tr.innerHTML = `
     <td class="p-1.5 text-center font-bold row-num"></td>
-    <td class="p-1.5 flex gap-1">
-      <select class="w-1/3 p-1 border rounded bg-white text-xs" onchange="filterPartsByType(this)">
-        ${typeOptions}
-      </select>
-      <select class="item-name w-2/3 p-1 border rounded bg-white text-xs" onchange="autoFillPrice(this)">
-        <option value="">- เลือกรายการ -</option>
-      </select>
+    <td class="p-1.5 relative">
+      <input type="text" class="item-search w-full p-1 border rounded bg-white text-xs outline-none focus:ring-1 focus:ring-cyan-500" placeholder="🔍 พิมพ์ชื่อหรือเบอร์อะไหล่เพื่อค้นหา..." oninput="filterPartInput(this)" autocomplete="off">
+      <div class="suggestions-box absolute left-0 right-0 bg-white border border-gray-300 rounded shadow-lg max-h-40 overflow-y-auto z-50 hidden mt-1"></div>
+      <input type="hidden" class="item-name-hidden" value="">
     </td>
-    <td class="p-1.5"><input type="number" class="item-qty w-full p-1 text-center border rounded" value="1" oninput="calculateTotal()"></td>
-    <td class="p-1.5"><input type="number" class="item-price w-full p-1 text-right border rounded" value="0" oninput="calculateTotal()"></td>
-    <td class="p-1.5 text-right item-total font-bold text-gray-700">0.00</td>
-    <td class="p-1.5 text-center hide-on-print"><button type="button" class="text-red-500 font-bold hover:text-red-700" onclick="deleteRow(this)">X</button></td>
+    <td class="p-1.5"><input type="number" class="item-qty w-full p-1 text-center border rounded text-xs" value="1" oninput="calculateTotal()"></td>
+    <td class="p-1.5"><input type="number" class="item-price w-full p-1 text-right border rounded text-xs" value="0" oninput="calculateTotal()"></td>
+    <td class="p-1.5 text-right item-total font-bold text-xs text-gray-700">0.00</td>
+    <td class="p-1.5 text-center hide-on-print"><button type="button" class="text-red-500 font-bold hover:text-red-700 text-xs" onclick="deleteRow(this)">X</button></td>
   `;
   tbody.appendChild(tr);
   updateRowNumbers();
@@ -76,23 +70,49 @@ function deleteRow(btn) {
   calculateTotal();
 }
 
-function filterPartsByType(typeSelect) {
-  const selectedType = typeSelect.value;
-  const nameSelect = typeSelect.nextElementSibling;
-  const filteredParts = globalPartsData.filter(p => p.part_type === selectedType);
-  let nameOptions = `<option value="">- เลือกรายการ -</option>`;
-  filteredParts.forEach(p => {
-    nameOptions += `<option value="${p.part_name}" data-price="${p.sale_price}">${p.part_name}</option>`;
+// ระบบพิมพ์ค้นหาอะไหล่แบบเรียลไทม์
+function filterPartInput(inputElem) {
+  const keyword = inputElem.value.toLowerCase().trim();
+  const box = inputElem.nextElementSibling;
+  
+  if (keyword.length === 0) {
+    box.classList.add('hidden');
+    box.innerHTML = '';
+    return;
+  }
+
+  const matched = globalPartsData.filter(p => p.part_name.toLowerCase().includes(keyword) || (p.part_type && p.part_type.toLowerCase().includes(keyword)));
+  
+  if (matched.length === 0) {
+    box.innerHTML = `<div class="p-2 text-xs text-gray-400">ไม่พบอะไหล่ที่ค้นหา</div>`;
+    box.classList.remove('hidden');
+    return;
+  }
+
+  let html = '';
+  matched.forEach(p => {
+    html += `<div class="p-2 text-xs hover:bg-cyan-50 cursor-pointer border-b flex justify-between items-center" onclick="selectPartItem(this, '${p.part_name}', ${p.sale_price})">
+      <span class="font-bold text-gray-800">${p.part_name}</span>
+      <span class="text-cyan-600 font-bold">${p.sale_price} ฿</span>
+    </div>`;
   });
-  nameSelect.innerHTML = nameOptions;
-  nameSelect.value = "";
-  autoFillPrice(nameSelect);
+  box.innerHTML = html;
+  box.classList.remove('hidden');
 }
 
-function autoFillPrice(selectElem) {
-  const selectedOption = selectElem.options[selectElem.selectedIndex];
-  const priceInput = selectElem.closest('tr').querySelector('.item-price');
-  priceInput.value = (selectedOption && selectedOption.value !== "") ? selectedOption.getAttribute('data-price') : 0;
+function selectPartItem(elem, name, price) {
+  const td = elem.closest('td');
+  const inputSearch = td.querySelector('.item-search');
+  const hiddenInput = td.querySelector('.item-name-hidden');
+  const box = td.querySelector('.suggestions-box');
+  
+  inputSearch.value = name;
+  hiddenInput.value = name;
+  box.classList.add('hidden');
+  
+  const row = td.closest('tr');
+  const priceInput = row.querySelector('.item-price');
+  priceInput.value = price;
   calculateTotal();
 }
 
@@ -132,7 +152,6 @@ function ArabicNumberToText(Number) {
   return text;
 }
 
-// 3. แก้ปัญหาเพิ่มอะไหล่แล้วขึ้นบิลทันทีโดยไม่ต้องรีเฟรช
 async function loadPartsDatabase() {
   try {
     const res = await fetch('/api/parts');
@@ -148,11 +167,11 @@ async function loadPartsDatabase() {
         const profit = (p.sale_price - p.cost_price).toFixed(2);
         tbody.innerHTML += `
           <tr class="hover:bg-gray-50">
-            <td class="p-2 border">${p.part_type || '-'}</td>
-            <td class="p-2 border font-bold">${p.part_name}</td>
-            <td class="p-2 border text-right text-red-600">${p.cost_price}</td>
-            <td class="p-2 border text-right text-green-600 font-bold">${p.sale_price}</td>
-            <td class="p-2 border text-right text-blue-600">${profit}</td>
+            <td class="p-2 border text-xs">${p.part_type || '-'}</td>
+            <td class="p-2 border font-bold text-xs">${p.part_name}</td>
+            <td class="p-2 border text-right text-red-600 text-xs">${p.cost_price}</td>
+            <td class="p-2 border text-right text-green-600 font-bold text-xs">${p.sale_price}</td>
+            <td class="p-2 border text-right text-blue-600 text-xs">${profit}</td>
             <td class="p-2 border text-xs">${p.source || '-'}</td>
             <td class="p-2 border text-center">
               <button onclick="editPart(${p.id}, '${p.part_type}', '${p.part_name}', ${p.cost_price}, ${p.sale_price}, '${p.source || ''}')" class="bg-yellow-400 px-2 py-1 rounded text-xs font-bold">แก้ไข</button>
@@ -182,8 +201,7 @@ document.getElementById('addPartForm').addEventListener('submit', async (e) => {
   await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
   
   resetPartForm();
-  await loadPartsDatabase(); // ดึงข้อมูลคลังใหม่ทันที
-  refreshAllDropdowns();   // อัปเดต Dropdown ในหน้าทำบิลทันที
+  await loadPartsDatabase();
   alert('บันทึกข้อมูลอะไหล่สำเร็จ!');
 });
 
@@ -207,22 +225,7 @@ async function deletePart(id) {
   if(confirm('ต้องการลบรายการนี้ใช่หรือไม่?')) {
     await fetch(`/api/parts/${id}`, { method: 'DELETE' });
     await loadPartsDatabase();
-    refreshAllDropdowns();
   }
-}
-
-function refreshAllDropdowns() {
-  document.querySelectorAll('#itemsTable tr:not(#laborRow)').forEach(row => {
-    const typeSelect = row.querySelector('select:first-child');
-    if(typeSelect) {
-      const currentVal = typeSelect.value;
-      const uniqueTypes = [...new Set(globalPartsData.map(p => p.part_type).filter(t => t))];
-      let typeOptions = `<option value="">- เลือกชนิด -</option>`;
-      uniqueTypes.forEach(t => { typeOptions += `<option value="${t}" ${t===currentVal?'selected':''}>${t}</option>`; });
-      typeSelect.innerHTML = typeOptions;
-      if(currentVal) filterPartsByType(typeSelect);
-    }
-  });
 }
 
 async function loadHistory() {
@@ -264,7 +267,6 @@ async function loadHistory() {
       if(item.amp_power) summaryText += ` ${item.amp_power}W`;
       if(item.symptom) summaryText += ` อาการ${item.symptom}`;
 
-      // 1. เรนเดอร์แบบตาราง (สำหรับคอมพิวเตอร์)
       const tr = document.createElement('tr');
       tr.className = "hover:bg-gray-50";
       tr.innerHTML = `
@@ -278,7 +280,6 @@ async function loadHistory() {
       `;
       tbody.appendChild(tr);
 
-      // 2. เรนเดอร์แบบการ์ด (สำหรับมือถือ)
       const card = document.createElement('div');
       card.className = "bg-white border rounded-lg shadow-sm p-3 space-y-2 relative";
       card.innerHTML = `
@@ -321,9 +322,7 @@ function openImageModal(imagePathsStr) {
   const container = document.getElementById('modalImagesContainer');
   container.innerHTML = '';
   const paths = imagePathsStr.split(',');
-  
   paths.forEach((path, index) => {
-    // สร้างรูปแบบการ์ดเรียงต่อกันเป็นแนวตั้ง ใช้นิ้วเลื่อนขึ้นลงได้สะดวก
     container.innerHTML += `
       <div class="bg-white border rounded-xl p-3 shadow-sm flex flex-col items-center">
         <span class="text-xs font-bold text-gray-500 mb-2 bg-gray-100 px-3 py-1 rounded-full">รูปที่ ${index + 1} / ${paths.length}</span>
@@ -334,7 +333,6 @@ function openImageModal(imagePathsStr) {
       </div>
     `;
   });
-  
   const modal = document.getElementById('imageModal');
   modal.classList.remove('hidden');
   modal.classList.add('flex');
@@ -381,15 +379,8 @@ async function editRepair(id) {
       const currentRow = rows[rows.length - 1];
       const partName = data.items[i].item_name;
       
-      const foundPart = globalPartsData.find(p => p.part_name === partName);
-      if(foundPart) {
-        const typeSelect = currentRow.querySelector('select:first-child');
-        typeSelect.value = foundPart.part_type;
-        filterPartsByType(typeSelect);
-        
-        const nameSelect = currentRow.querySelector('.item-name');
-        nameSelect.value = partName;
-      }
+      currentRow.querySelector('.item-search').value = partName;
+      currentRow.querySelector('.item-name-hidden').value = partName;
       currentRow.querySelector('.item-qty').value = data.items[i].quantity;
       currentRow.querySelector('.item-price').value = data.items[i].unit_price;
     }
@@ -444,8 +435,7 @@ document.getElementById('repairForm').addEventListener('submit', async (e) => {
   });
 
   document.querySelectorAll('#itemsTable tr:not(#laborRow)').forEach(row => {
-    const selectElem = row.querySelector('.item-name');
-    const name = selectElem?.options[selectElem.selectedIndex]?.value;
+    const name = row.querySelector('.item-search')?.value;
     const qty = row.querySelector('.item-qty')?.value;
     const price = row.querySelector('.item-price')?.value;
     if (name) items.push({ name, qty, price });
@@ -463,16 +453,12 @@ document.getElementById('repairForm').addEventListener('submit', async (e) => {
   }
 });
 
-// ฟังก์ชันปิดหน้าต่างดูรูปบิล
 function closeBillPreview() {
   document.getElementById('billPreviewModal').style.display = 'none';
 }
 
-// ฟังก์ชันดาวน์โหลดภาพบิลที่ปรับปรุงใหม่ (แปลง input เป็นข้อความก่อนแคป)
-// ฟังก์ชันดาวน์โหลดภาพบิล (อัปเดตแก้ปัญหากรอบตารางหลุด)
 function downloadBillImage() {
   const billArea = document.getElementById('billArea');
-  
   const hideElements = billArea.querySelectorAll('.hide-on-print');
   hideElements.forEach(el => el.style.display = 'none');
 
@@ -482,24 +468,16 @@ function downloadBillImage() {
   inputs.forEach(el => {
     let val = el.tagName === 'SELECT' ? (el.options[el.selectedIndex]?.text || '') : el.value;
     
-    // หากค่าเป็น "- เลือกรายการ -" ให้พิมพ์ออกมาเป็นช่องว่างบิลจะได้สะอาดๆ
-    if (val.includes('- เลือก')) val = '';
-    
     const span = document.createElement('div');
     span.innerText = val;
-    
-    // ตั้งค่าการจัดวางข้อความ
     span.style.display = 'flex';
     span.style.alignItems = 'center';
     span.style.minHeight = el.offsetHeight > 0 ? el.offsetHeight + 'px' : '28px';
     span.style.width = '100%';
-    span.style.fontSize = '12px'; // ขนาดอักษรมาตรฐาน
-    
-    // คัดลอกความหนาและสีข้อความ
+    span.style.fontSize = '12px';
     span.style.fontWeight = el.classList.contains('font-bold') ? 'bold' : 'normal';
     span.style.color = el.classList.contains('text-red-600') ? '#dc2626' : (el.classList.contains('text-blue-800') ? '#1e40af' : '#000');
     
-    // จัดซ้าย-กลาง-ขวา ตามช่องเดิม
     if (el.classList.contains('text-right')) span.style.justifyContent = 'flex-end';
     else if (el.classList.contains('text-center')) span.style.justifyContent = 'center';
     else span.style.justifyContent = 'flex-start';
@@ -507,9 +485,6 @@ function downloadBillImage() {
     span.style.background = 'transparent';
     span.style.padding = '0 4px';
     
-    // **หัวใจสำคัญ:** 
-    // - ถ้าอยู่นอกตาราง (เช่น ชื่อลูกค้า) ให้มีเส้นใต้
-    // - ถ้าอยู่ในตาราง (เช่น อะไหล่) ไม่ต้องใส่กรอบใดๆ เลย ให้เนียนไปกับตาราง!
     if (!el.closest('#itemsTable')) {
       span.style.borderBottom = '1px solid #9ca3af';
     } else {
@@ -517,10 +492,8 @@ function downloadBillImage() {
     }
     
     el.parentNode.insertBefore(span, el);
-    
     const originalDisplay = el.style.display;
     el.style.display = 'none';
-    
     replacements.push({ el, span, originalDisplay });
   });
 
