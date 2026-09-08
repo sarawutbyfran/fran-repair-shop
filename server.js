@@ -40,7 +40,6 @@ const uploadGallery = multer({ storage: galleryStorage });
 app.get('/api/gallery', (req, res) => {
   fs.readdir(galleryDir, (err, files) => {
     if (err) return res.status(500).json([]);
-    // ส่ง path ของไฟล์กลับไป
     res.json(files.map(f => `/gallery/${f}`));
   });
 });
@@ -160,6 +159,34 @@ app.put('/api/repairs/:id', upload.array('repair_images', 10), (req, res) => {
         stmt.finalize();
         res.json({ success: true });
       });
+    });
+  });
+});
+
+// API สำหรับลบรูปภาพเฉพาะรูปออกจากบิลงานซ่อม
+app.delete('/api/repairs/:id/image', (req, res) => {
+  const repairId = req.params.id;
+  const { image_path } = req.body; // path ของรูปที่ต้องการลบ เช่น /uploads/12345.png
+
+  db.get("SELECT image_path FROM repairs WHERE id = ?", [repairId], (err, row) => {
+    if (err || !row) return res.status(404).json({ error: 'Repair not found' });
+
+    let paths = row.image_path ? row.image_path.split(',') : [];
+    // กรองรูปที่ต้องการลบออก
+    const updatedPaths = paths.filter(p => p !== image_path);
+    const newImagePathStr = updatedPaths.join(',');
+
+    // ลบไฟล์จริงออกจากโฟลเดอร์ uploads
+    const filename = path.basename(image_path);
+    const filePath = path.join(uploadDir, filename);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // อัปเดตฐานข้อมูลใหม่
+    db.run("UPDATE repairs SET image_path = ? WHERE id = ?", [newImagePathStr, repairId], (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true, image_path: newImagePathStr });
     });
   });
 });
