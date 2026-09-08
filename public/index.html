@@ -38,7 +38,7 @@
       <button onclick="switchTab('dashboardTab')" id="btn-dashboardTab" class="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-cyan-600 text-white shadow-md transition-all whitespace-nowrap">📊 ภาพรวม</button>
       <button onclick="switchTab('billTab')" id="btn-billTab" class="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all whitespace-nowrap">📝 ทำบิล</button>
       <button onclick="switchTab('historyTab')" id="btn-historyTab" class="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all whitespace-nowrap">📋 ประวัติ</button>
-      <button onclick="switchTab('galleryTab')" id="btn-galleryTab" class="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all whitespace-nowrap">📸 อัลบั้มรูปภาพ</button>
+      <button onclick="switchTab('galleryTab')" id="btn-galleryTab" class="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all whitespace-nowrap">📸 คลังรูปภาพ</button>
       <button onclick="switchTab('inventoryTab')" id="btn-inventoryTab" class="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all whitespace-nowrap">⚙️ คลังอะไหล่</button>
     </div>
 
@@ -183,27 +183,25 @@
       </div>
     </div>
 
-    <!-- ================= 3. หน้าอัลบั้มรูปภาพ ================= -->
+    <!-- ================= 3. หน้าคลังรูปภาพ (Gallery) ================= -->
     <div id="tab-galleryTab" class="tab-content hidden space-y-6">
-      <!-- อัลบั้มคลังรูปภาพทั่วไป -->
       <div class="bg-gray-900 p-4 md:p-6 rounded-2xl shadow-xl border border-gray-800 space-y-4">
         <div class="flex justify-between items-center border-b border-gray-800 pb-3">
           <div>
-            <h2 class="text-xl font-bold text-purple-400">📸 อัลบั้มคลังรูปภาพทั่วไป (ส่งข้ามเครื่อง)</h2>
-            <p class="text-xs text-gray-400 mt-1">พื้นที่อัปโหลดรูปภาพอิสระ (ไม่เกี่ยวกับบิล)</p>
+            <h2 class="text-xl font-bold text-purple-400">📸 คลังรูปภาพทั่วไป (อัปโหลดล่าสุด)</h2>
+            <p class="text-xs text-gray-400 mt-1">พื้นที่อัปโหลดรูปภาพอิสระ (ไม่เกี่ยวกับบิล แสดงเรียงทีละรูป)</p>
           </div>
           <label class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl text-xs font-bold shadow cursor-pointer transition-all">
             + อัปโหลดรูปเพิ่ม <input type="file" id="globalGalleryUpload" accept="image/*" multiple class="hidden" onchange="uploadGlobalImages(this)">
           </label>
         </div>
-        <div id="globalAlbumContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2"></div>
+        <div id="globalGalleryContainer" class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2"></div>
       </div>
 
-      <!-- อัลบั้มรูปจากบิลงานซ่อม -->
       <div class="bg-gray-900 p-4 md:p-6 rounded-2xl shadow-xl border border-gray-800 space-y-4">
         <div class="border-b border-gray-800 pb-3">
           <h2 class="text-xl font-bold text-cyan-400">📁 อัลบั้มรูปภาพจากบิลงานซ่อมทั้งหมด</h2>
-          <p class="text-xs text-gray-400 mt-1">อัลบั้มแยกตามเลขที่บิลและชื่อลูกค้าพร้อมรูปตัวอย่าง</p>
+          <p class="text-xs text-gray-400 mt-1">อัลบั้มแยกตามเลขที่บิล พร้อมให้เปิดดูและลบรูปภาพได้</p>
         </div>
         <div id="repairAlbumContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2"></div>
       </div>
