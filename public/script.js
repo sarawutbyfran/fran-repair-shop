@@ -244,14 +244,15 @@ async function loadHistory() {
     if(debtSummaryElem) debtSummaryElem.innerText = totalDebt.toLocaleString('th-TH', {minimumFractionDigits: 2});
 
     const tbody = document.getElementById('historyTable');
-    if(!tbody) return;
+    const cardsContainer = document.getElementById('historyCards');
+    if(!tbody || !cardsContainer) return;
+    
     tbody.innerHTML = '';
+    cardsContainer.innerHTML = '';
 
     data.forEach(item => {
-      const tr = document.createElement('tr');
-      tr.className = "hover:bg-gray-50";
-      
-      let imagesHTML = item.image_path ? `<button onclick="openImageModal('${item.image_path}')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded border font-bold hover:bg-purple-200">ดูรูป (${item.image_path.split(',').length})</button>` : '-';
+      let imagesHTMLDesktop = item.image_path ? `<button onclick="openImageModal('${item.image_path}')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded border font-bold hover:bg-purple-200">ดูรูป (${item.image_path.split(',').length})</button>` : '-';
+      let imagesHTMLMobile = item.image_path ? `<button onclick="openImageModal('${item.image_path}')" class="text-[11px] bg-purple-100 text-purple-700 px-1 py-1 rounded border font-bold">รูป (${item.image_path.split(',').length})</button>` : `<span class="text-xs text-center text-gray-400">ไม่มีรูป</span>`;
       
       const currentStatus = item.status || 'กำลังซ่อม';
       let statusColor = currentStatus === 'ซ่อมเสร็จ' ? 'text-green-600' : (currentStatus === 'รออะไหล่' ? 'text-red-500' : 'text-orange-500');
@@ -263,26 +264,53 @@ async function loadHistory() {
       if(item.amp_power) summaryText += ` ${item.amp_power}W`;
       if(item.symptom) summaryText += ` อาการ${item.symptom}`;
 
+      // 1. เรนเดอร์แบบตาราง (สำหรับคอมพิวเตอร์)
+      const tr = document.createElement('tr');
+      tr.className = "hover:bg-gray-50";
       tr.innerHTML = `
-        <td class="p-2 border font-bold text-cyan-700">
-          ${item.bill_no}<br>
-          <span class="text-xs text-gray-500">${item.date}</span><br>
-          <span class="text-xs text-blue-900 font-semibold">🔧 ${summaryText}</span>
-        </td>
+        <td class="p-2 border font-bold text-cyan-700">${item.bill_no}<br><span class="text-xs text-gray-500">${item.date}</span><br><span class="text-xs text-blue-900 font-semibold">🔧 ${summaryText}</span></td>
         <td class="p-2 border">${item.customer_name}</td>
         <td class="p-2 border font-bold">${item.repair_sender || '-'}<br><span class="${statusColor} text-xs">${currentStatus}</span></td>
         <td class="p-2 border text-right font-bold text-red-600">${billTotal}</td>
-        <td class="p-2 border text-center">${imagesHTML}</td>
-        <td class="p-2 border text-center">
-          <button onclick="togglePay(${item.id}, ${item.is_paid ? 0 : 1})" class="px-2 py-1 rounded text-white text-xs font-bold ${item.is_paid ? 'bg-green-500' : 'bg-red-500'} shadow">
-            ${item.is_paid ? '✓ จ่ายแล้ว' : '✕ ค้างชำระ'}
-          </button>
-        </td>
-        <td class="p-2 border text-center">
-          <button onclick="editRepair(${item.id})" class="px-2 py-1 bg-yellow-400 text-yellow-900 rounded text-xs font-bold hover:bg-yellow-500 shadow">แก้ไขบิล</button>
-        </td>
+        <td class="p-2 border text-center">${imagesHTMLDesktop}</td>
+        <td class="p-2 border text-center"><button onclick="togglePay(${item.id}, ${item.is_paid ? 0 : 1})" class="px-2 py-1 rounded text-white text-xs font-bold ${item.is_paid ? 'bg-green-500' : 'bg-red-500'} shadow">${item.is_paid ? '✓ จ่ายแล้ว' : '✕ ค้างชำระ'}</button></td>
+        <td class="p-2 border text-center"><button onclick="editRepair(${item.id})" class="px-2 py-1 bg-yellow-400 text-yellow-900 rounded text-xs font-bold hover:bg-yellow-500 shadow">แก้ไขบิล</button></td>
       `;
       tbody.appendChild(tr);
+
+      // 2. เรนเดอร์แบบการ์ด (สำหรับมือถือ)
+      const card = document.createElement('div');
+      card.className = "bg-white border rounded-lg shadow-sm p-3 space-y-2 relative";
+      card.innerHTML = `
+        <div class="flex justify-between items-start border-b pb-2">
+          <div>
+            <div class="font-bold text-cyan-700 text-sm">${item.bill_no}</div>
+            <div class="text-[11px] text-gray-500">${item.date}</div>
+          </div>
+          <div class="text-right">
+            <span class="${statusColor} text-[11px] font-bold bg-gray-50 border px-1.5 py-0.5 rounded">${currentStatus}</span>
+            <div class="text-[11px] text-gray-600 mt-1 font-bold">ช่าง: ${item.repair_sender || '-'}</div>
+          </div>
+        </div>
+        <div class="text-xs">
+          <div><span class="font-bold text-gray-700">ลค:</span> ${item.customer_name}</div>
+          <div class="text-blue-800 font-semibold mt-1">🔧 ${summaryText}</div>
+        </div>
+        <div class="flex justify-between items-center bg-red-50 p-1.5 rounded border border-red-100 mt-1">
+          <span class="text-xs font-bold text-red-800">ยอดเงิน:</span>
+          <span class="font-bold text-red-600 text-sm">${billTotal} ฿</span>
+        </div>
+        <div class="grid grid-cols-3 gap-1.5 mt-2">
+          ${imagesHTMLMobile}
+          <button onclick="togglePay(${item.id}, ${item.is_paid ? 0 : 1})" class="py-1 rounded text-white text-[11px] font-bold ${item.is_paid ? 'bg-green-500' : 'bg-red-500'} shadow">
+            ${item.is_paid ? '✓ จ่ายแล้ว' : '✕ ค้างชำระ'}
+          </button>
+          <button onclick="editRepair(${item.id})" class="py-1 bg-yellow-400 text-yellow-900 rounded text-[11px] font-bold shadow">
+            แก้ไขบิล
+          </button>
+        </div>
+      `;
+      cardsContainer.appendChild(card);
     });
   } catch(e) {
     console.error('Failed to load history', e);
@@ -428,6 +456,7 @@ document.getElementById('repairForm').addEventListener('submit', async (e) => {
 // 1. แก้ไขปุ่มดาวน์โหลดในมือถือ: เปิดรูปขึ้นมาในแท็บใหม่ให้กดค้างแล้วบันทึกลงอัลบั้มภาพได้ 100%
 function downloadBillImage() {
   const billArea = document.getElementById('billArea');
+  
   billArea.classList.add('capturing-canvas');
   const deleteBtns = billArea.querySelectorAll('.hide-on-print');
   deleteBtns.forEach(el => el.style.display = 'none');
@@ -437,25 +466,16 @@ function downloadBillImage() {
     deleteBtns.forEach(el => el.style.display = '');
 
     const imageURL = canvas.toDataURL("image/png");
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     if (isMobile) {
-      // เปิดหน้าต่างรูปภาพโดยตรงเพื่อให้ผู้ใช้ในมือถือแตะค้างไว้แล้วเลือก "บันทึกรูปภาพ" (Add to Photos)
-      const win = window.open();
-      if(win) {
-        win.document.write(`
-          <html>
-            <head><title>ดาวน์โหลดบิล</title></head>
-            <body style="background:#111;text-align:center;margin:0;padding:20px;">
-              <p style="color:#fff;font-family:sans-serif;font-size:15px;margin-bottom:15px;">👉 กดค้างที่รูปภาพด้านล่าง แล้วเลือก <b>"บันทึกรูปภาพ"</b> หรือ <b>"Add to Photos"</b></p>
-              <img src="${imageURL}" style="max-width:100%;height:auto;border-radius:6px;box-shadow:0 4px 15px rgba(0,0,0,0.5);"/>
-            </body>
-          </html>
-        `);
-      } else {
-        alert('กรุณาอนุญาต Pop-up บนเบราว์เซอร์เพื่อแสดงรูปภาพบิล');
-      }
+      // บนมือถือ โชว์รูปผ่าน Modal ในหน้าเดิมเลย 100% ไม่ติด Pop-up blocker
+      const modal = document.getElementById('billPreviewModal');
+      const imgElem = document.getElementById('billImageElement');
+      imgElem.src = imageURL;
+      modal.classList.remove('hidden');
     } else {
+      // สำหรับคอมพิวเตอร์ โหลดลงเครื่องตามปกติ
       const link = document.createElement('a');
       link.download = `Bill-${document.getElementById('bill_no').value}.png`;
       link.href = imageURL;
