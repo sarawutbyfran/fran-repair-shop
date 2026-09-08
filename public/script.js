@@ -56,37 +56,27 @@ async function loadDashboardStats() {
   }
 }
 
-// โหลดรูปภาพทั้งหมดในระบบสำหรับหน้า "คลังรูปภาพ"
+// ----------------- คลังรูปภาพอิสระ (Gallery) -----------------
 async function loadGlobalGallery() {
   try {
-    const res = await fetch('/api/repairs');
-    const data = await res.json();
+    const res = await fetch('/api/gallery');
+    const images = await res.json();
     const container = document.getElementById('globalGalleryContainer');
     container.innerHTML = '';
     
-    let allImages = [];
-    data.forEach(item => {
-      if (item.image_path) {
-        const paths = item.image_path.split(',');
-        paths.forEach(p => {
-          allImages.push({ repairId: item.id, billNo: item.bill_no, path: p.trim() });
-        });
-      }
-    });
-
-    if (allImages.length === 0) {
+    if (images.length === 0) {
       container.innerHTML = `<div class="col-span-full text-center text-gray-500 py-10">ยังไม่มีรูปภาพในระบบ</div>`;
       return;
     }
 
-    allImages.forEach((imgObj, idx) => {
+    images.forEach((path, idx) => {
+      const filename = path.split('/').pop();
       container.innerHTML += `
         <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3 shadow-md flex flex-col items-center space-y-2">
-          <span class="text-[11px] font-bold text-cyan-400 bg-gray-900 px-2.5 py-0.5 rounded-full border border-gray-700">บิล: ${imgObj.billNo}</span>
-          <img src="${imgObj.path}" class="w-full h-36 object-contain rounded-xl bg-gray-900 border border-gray-700" alt="Gallery Image">
+          <img src="${path}" class="w-full h-36 object-contain rounded-xl bg-gray-900 border border-gray-700" alt="Gallery Image">
           <div class="grid grid-cols-2 gap-1 w-full pt-1">
-            <a href="${imgObj.path}" download="repair-${imgObj.billNo}-${idx}.png" target="_blank" class="bg-cyan-600 hover:bg-cyan-500 text-white text-center py-1.5 rounded-xl text-xs font-bold shadow transition-all">📥 โหลด</a>
-            <button onclick="deleteRepairImage(${imgObj.repairId}, '${imgObj.path}')" class="bg-rose-600 hover:bg-rose-500 text-white py-1.5 rounded-xl text-xs font-bold shadow transition-all">🗑️ ลบรูป</button>
+            <a href="${path}" download="gallery-${idx}.png" target="_blank" class="bg-cyan-600 hover:bg-cyan-500 text-white text-center py-1.5 rounded-xl text-xs font-bold shadow transition-all">📥 โหลด</a>
+            <button onclick="deleteGalleryImage('${filename}')" class="bg-rose-600 hover:bg-rose-500 text-white py-1.5 rounded-xl text-xs font-bold shadow transition-all">🗑️ ลบรูป</button>
           </div>
         </div>
       `;
@@ -96,75 +86,44 @@ async function loadGlobalGallery() {
   }
 }
 
-// อัปโหลดรูปภาพตรงเข้าคลังรูปภาพ
 async function uploadGlobalImages(inputElem) {
   if (inputElem.files.length === 0) return;
   const formData = new FormData();
   for (let i = 0; i < inputElem.files.length; i++) {
-    formData.append('repair_images', inputElem.files[i]);
+    formData.append('images', inputElem.files[i]);
   }
-  // ส่งไปผูกกับบิลล่าสุดหรือสร้างบันทึกรูปเดี่ยว
-  formData.append('bill_no', 'GALLERY-' + Date.now());
-  formData.append('date', new Date().toISOString().split('T')[0]);
-  formData.append('customer_name', 'คลังรูปภาพทั่วไป');
-  formData.append('items', JSON.stringify([{name: 'อัปโหลดรูปภาพสะสม', qty: 1, price: 0}]));
-
-  const res = await fetch('/api/repairs', { method: 'POST', body: formData });
+  // เรียกใช้ API /api/gallery แทน เพื่อไม่ให้เกิดประวัติบิลหลอก
+  const res = await fetch('/api/gallery', { method: 'POST', body: formData });
   if (res.ok) {
-    alert('อัปโหลดรูปภาพสำเร็จ!');
+    alert('อัปโหลดรูปลงคลังสำเร็จ!');
     inputElem.value = '';
     loadGlobalGallery();
-    loadHistory();
   }
 }
 
-// ฟังก์ชันลบรูปภาพเฉพาะรูปออกจากบิล
-async function deleteRepairImage(repairId, targetPath) {
-  if (!confirm('ต้องการลบรูปภาพนี้ออกจากระบบใช่หรือไม่?')) return;
-  const res = await fetch(`/api/repairs/${repairId}`);
-  const data = await res.json();
-  
-  let paths = data.image_path ? data.image_path.split(',') : [];
-  paths = paths.filter(p => p.trim() !== targetPath.trim());
-  
-  const updatedImagePath = paths.length > 0 ? paths.join(',') : null;
-
-  // อัปเดตข้อมูลกลับไปที่เซิร์ฟเวอร์
-  const formData = new FormData();
-  formData.append('bill_no', data.bill_no);
-  formData.append('date', data.date);
-  formData.append('customer_name', data.customer_name);
-  formData.append('customer_address', data.customer_address || '');
-  formData.append('repair_sender', data.repair_sender || '');
-  formData.append('amp_class', data.amp_class || '');
-  formData.append('amp_brand', data.amp_brand || '');
-  formData.append('amp_power', data.amp_power || '');
-  formData.append('symptom', data.symptom || '');
-  formData.append('status', data.status || '');
-  formData.append('existing_image_path', updatedImagePath || '');
-  
-  let items = data.items.map(i => ({ name: i.item_name, qty: i.quantity, price: i.unit_price }));
-  formData.append('items', JSON.stringify(items));
-
-  const updateRes = await fetch(`/api/repairs/${repairId}`, { method: 'PUT', body: formData });
-  if (updateRes.ok) {
-    alert('ลบรูปภาพสำเร็จ!');
-    loadGlobalGallery();
-    loadHistory();
-  }
-}
-
-// ฟังก์ชันลบข้อมูลบิลงานซ่อม
-async function deleteRepair(id) {
-  if (!confirm('⚠️ คำเตือน: คุณต้องการลบบิลงานซ่อมนี้ออกจากระบบใช่หรือไม่? ข้อมูลและรูปภาพทั้งหมดจะถูกลบถาวร')) return;
-  const res = await fetch(`/api/repairs/${id}`, { method: 'DELETE' });
+async function deleteGalleryImage(filename) {
+  if (!confirm('ต้องการลบรูปภาพนี้ออกจากคลังใช่หรือไม่?')) return;
+  const res = await fetch(`/api/gallery/${filename}`, { method: 'DELETE' });
   if (res.ok) {
-    alert('ลบบิลงานซ่อมสำเร็จ!');
-    loadHistory();
-    loadDashboardStats();
     loadGlobalGallery();
   }
 }
+// -----------------------------------------------------------
+
+// ----------------- อัปเดตตัวเลือกชนิดอะไหล่หลังบ้าน -----------------
+function updateAllTypeDropdowns() {
+  const uniqueTypes = [...new Set(globalPartsData.map(p => p.part_type).filter(t => t))];
+  let typeOptions = `<option value="">- เลือกชนิด -</option>`;
+  uniqueTypes.forEach(t => { typeOptions += `<option value="${t}">${t}</option>`; });
+
+  // อัปเดต dropdown ทุกแถวในหน้าบิล โดยยังคงค่าเดิมที่เลือกไว้
+  document.querySelectorAll('#itemsTable select').forEach(select => {
+    const currentVal = select.value;
+    select.innerHTML = typeOptions;
+    select.value = currentVal;
+  });
+}
+// -----------------------------------------------------------
 
 function addItemRow() {
   const tbody = document.getElementById('itemsTable');
@@ -186,7 +145,7 @@ function addItemRow() {
       </div>
     </td>
     <td class="p-1.5"><input type="number" class="item-qty w-full p-1 text-center border rounded text-xs text-gray-900" value="1" oninput="calculateTotal()"></td>
-    <td class="p-1.5"><input type="number" class="item-price w-full p-1 text-right border rounded text-xs text-gray-900" value="0" oninput="calculateTotal()"></td>
+    <td class="p-1.5"><input type="number" step="any" class="item-price w-full p-1 text-right border rounded text-xs text-gray-900" value="0" oninput="calculateTotal()"></td>
     <td class="p-1.5 text-right item-total font-bold text-xs text-gray-900">0.00</td>
     <td class="p-1.5 text-center hide-on-print"><button type="button" class="text-red-500 font-bold hover:text-red-700 text-xs" onclick="deleteRow(this)">X</button></td>
   `;
@@ -343,6 +302,8 @@ async function loadPartsDatabase() {
           </tr>`;
       });
     }
+    // อัปเดต Dropdown ในบิลทันทีเมื่อฐานข้อมูลโหลดเสร็จ
+    updateAllTypeDropdowns();
   } catch (e) {
     console.error('Failed to load parts', e);
   }
@@ -515,6 +476,7 @@ async function togglePay(id, status) {
   loadDashboardStats();
 }
 
+// ----------------- ค้นหาและจับคู่ "ชนิดอะไหล่" ตอนกดแก้ไขบิล -----------------
 async function editRepair(id) {
   const res = await fetch(`/api/repairs/${id}`);
   const data = await res.json();
@@ -548,6 +510,12 @@ async function editRepair(id) {
       currentRow.querySelector('.item-search').value = partName;
       currentRow.querySelector('.item-qty').value = data.items[i].quantity;
       currentRow.querySelector('.item-price').value = data.items[i].unit_price;
+
+      // ค้นหาว่าเป็นอะไหล่ชนิดไหนในระบบ เพื่อเซ็ตค่ากลับให้ตรงกัน
+      const matchedPart = globalPartsData.find(p => p.part_name === partName);
+      if (matchedPart) {
+        currentRow.querySelector('select').value = matchedPart.part_type;
+      }
     }
   }
   calculateTotal();
@@ -558,6 +526,7 @@ async function editRepair(id) {
   submitBtn.innerText = "อัปเดตบิลซ่อม";
   submitBtn.classList.replace('bg-emerald-600', 'bg-amber-600');
 }
+// -------------------------------------------------------------------------
 
 function resetForm() {
   document.getElementById('repairForm').reset();
@@ -623,7 +592,17 @@ function closeBillPreview() {
   document.getElementById('billPreviewModal').style.display = 'none';
 }
 
-// ฟังก์ชันดาวน์โหลดภาพบิล (แก้ไขปรับปรุง Vertical Alignment ให้อยู่กึ่งกลางตารางเป๊ะๆ)
+async function deleteRepair(id) {
+  if (!confirm('⚠️ คำเตือน: คุณต้องการลบบิลงานซ่อมนี้ออกจากระบบใช่หรือไม่? ข้อมูลและรูปภาพทั้งหมดจะถูกลบถาวร')) return;
+  const res = await fetch(`/api/repairs/${id}`, { method: 'DELETE' });
+  if (res.ok) {
+    alert('ลบบิลงานซ่อมสำเร็จ!');
+    loadHistory();
+    loadDashboardStats();
+  }
+}
+
+// ----------------- แก้ไขฟังก์ชันการแคปเจอร์รูป (ใช้ line-height แทน flexbox) -----------------
 function downloadBillImage() {
   const billArea = document.getElementById('billArea');
   const hideElements = billArea.querySelectorAll('.hide-on-print');
@@ -638,17 +617,20 @@ function downloadBillImage() {
     
     const span = document.createElement('div');
     span.innerText = val;
-    span.style.display = 'flex';
-    span.style.alignItems = 'center'; // จัดกึ่งกลางแนวตั้ง (Vertical Center)
-    span.style.minHeight = el.offsetHeight > 0 ? el.offsetHeight + 'px' : '28px';
+    span.style.display = 'block'; // เปลี่ยนจาก flex เป็น block เพื่อลดปัญหาความคลาดเคลื่อน
+    
+    // ตั้งค่าความสูงของกล่องและการจัดกึ่งกลาง
+    const elHeight = el.offsetHeight > 0 ? el.offsetHeight : 28;
+    span.style.height = elHeight + 'px';
+    span.style.lineHeight = elHeight + 'px'; // ใช้ line-height ควบคุมให้อยู่ตรงกลางบรรทัด
     span.style.width = '100%';
     span.style.fontSize = '12px';
     span.style.fontWeight = el.classList.contains('font-bold') ? 'bold' : 'normal';
     span.style.color = el.classList.contains('text-red-600') ? '#dc2626' : (el.classList.contains('text-blue-800') ? '#1e40af' : '#000');
     
-    if (el.classList.contains('text-right')) span.style.justifyContent = 'flex-end';
-    else if (el.classList.contains('text-center')) span.style.justifyContent = 'center';
-    else span.style.justifyContent = 'flex-start';
+    if (el.classList.contains('text-right')) span.style.textAlign = 'right';
+    else if (el.classList.contains('text-center')) span.style.textAlign = 'center';
+    else span.style.textAlign = 'left';
     
     span.style.background = 'transparent';
     span.style.padding = '0 4px';
@@ -700,3 +682,4 @@ function downloadBillImage() {
     replacements.forEach(r => { r.span.remove(); r.el.style.display = r.originalDisplay; });
   });
 }
+// ------------------------------------------------------------------------------------------

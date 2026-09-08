@@ -13,6 +13,8 @@
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #111827; }
     ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    /* Fix สำหรับกล่องบิลเงินสดให้กลางเป๊ะใน html2canvas */
+    .bill-badge { padding: 10px 24px; text-align: center; }
   </style>
 </head>
 <body class="p-2 md:p-6 font-sans">
@@ -32,7 +34,7 @@
       </div>
     </div>
 
-    <!-- เมนูบาร์หลัก (เพิ่มแท็บคลังรูปภาพ) -->
+    <!-- เมนูบาร์หลัก -->
     <div class="bg-gray-900 p-2 rounded-xl shadow-lg flex gap-1.5 border border-gray-800 overflow-x-auto">
       <button onclick="switchTab('dashboardTab')" id="btn-dashboardTab" class="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-cyan-600 text-white shadow-md transition-all whitespace-nowrap">📊 ภาพรวม</button>
       <button onclick="switchTab('billTab')" id="btn-billTab" class="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all whitespace-nowrap">📝 ทำบิล</button>
@@ -76,9 +78,9 @@
                 <p class="text-[10px] md:text-[11px] text-gray-600 mt-1">ที่อยู่ 3/10 หมู่ 5 ทุ่งบางกระแบล ต.นาป่า อ.เมือง จ.ชลบุรี 20000</p>
               </div>
             </div>
-            <!-- ป้ายบิลเงินสด จัดกึ่งกลางสมบูรณ์แบบทั้งแนวตั้งและแนวนอน -->
-            <div class="bg-cyan-100 px-6 py-2 rounded-lg border-2 border-cyan-400 flex items-center justify-center min-w-[120px] h-[46px]">
-              <h2 class="text-lg md:text-xl font-bold text-cyan-900 tracking-wide leading-none m-0 p-0">บิลเงินสด</h2>
+            <!-- แก้ไข: ป้ายบิลเงินสดใช้ Padding แทน Flexbox เพื่อให้ตรงกลางตอนแคปรูป -->
+            <div class="bg-cyan-100 rounded-lg border-2 border-cyan-400 bill-badge">
+              <h2 class="text-lg md:text-xl font-bold text-cyan-900 tracking-wide m-0" style="line-height: 1.2;">บิลเงินสด</h2>
             </div>
           </div>
 
@@ -125,7 +127,7 @@
             <table class="w-full text-sm print-border">
               <thead><tr class="bg-cyan-50 text-gray-900"><th class="p-1.5 w-10 text-center">ลำดับ</th><th class="p-1.5 text-center">รายการ (Descriptions)</th><th class="p-1.5 w-16 text-center">จำนวน</th><th class="p-1.5 w-20 text-center">หน่วยละ</th><th class="p-1.5 w-24 text-center">จำนวนเงิน</th><th class="p-1.5 w-8 text-center hide-on-print">ลบ</th></tr></thead>
               <tbody id="itemsTable">
-                <tr id="laborRow"><td class="p-1.5 text-center font-bold row-num">1</td><td class="p-1.5"><input type="text" id="labor_desc" class="w-full p-1 bg-yellow-50 font-bold text-blue-800 outline-none text-xs border-b border-dashed border-gray-300" readonly></td><td class="p-1.5"><input type="number" class="item-qty w-full p-1 text-center bg-transparent text-xs border-b border-dashed border-gray-300" value="1" readonly></td><td class="p-1.5"><input type="number" class="item-price w-full p-1 text-right bg-transparent text-xs border-b border-dashed border-gray-300" value="0" oninput="calculateTotal()"></td><td class="p-1.5 text-right item-total font-bold text-xs">0.00</td><td class="p-1.5 text-center hide-on-print"></td></tr>
+                <tr id="laborRow"><td class="p-1.5 text-center font-bold row-num">1</td><td class="p-1.5"><input type="text" id="labor_desc" class="w-full p-1 bg-yellow-50 font-bold text-blue-800 outline-none text-xs border-b border-dashed border-gray-300" readonly></td><td class="p-1.5"><input type="number" class="item-qty w-full p-1 text-center bg-transparent text-xs border-b border-dashed border-gray-300" value="1" readonly></td><td class="p-1.5"><input type="number" class="item-price w-full p-1 text-right bg-transparent text-xs border-b border-dashed border-gray-300" value="0" step="any" oninput="calculateTotal()"></td><td class="p-1.5 text-right item-total font-bold text-xs">0.00</td><td class="p-1.5 text-center hide-on-print"></td></tr>
               </tbody>
               <tfoot>
                 <tr><td colspan="2" class="p-1.5 text-center font-bold text-cyan-800 bg-cyan-50 text-xs" id="total_text_thai">( ศูนย์บาทถ้วน )</td><td colspan="2" class="p-1.5 text-right font-bold border-t text-xs text-gray-700">รวมเงิน</td><td class="p-1.5 text-right font-bold border-t text-red-600 text-sm" id="grand_total">0.00</td><td class="hide-on-print border-t"></td></tr>
@@ -148,7 +150,7 @@
       </form>
     </div>
 
-    <!-- ================= 2. หน้าประวัติงานซ่อม (เพิ่มปุ่มลบบิล) ================= -->
+    <!-- ================= 2. หน้าประวัติงานซ่อม ================= -->
     <div id="tab-historyTab" class="tab-content hidden">
       <div class="bg-gray-900 p-4 md:p-6 rounded-2xl shadow-xl border border-gray-800 space-y-4">
         <div class="flex flex-col md:flex-row justify-between items-center gap-3">
@@ -183,16 +185,16 @@
       </div>
     </div>
 
-    <!-- ================= 3. คลังรูปภาพ (เพิ่มใหม่ตามคำขอ) ================= -->
+    <!-- ================= 3. คลังรูปภาพ (Gallery อิสระ) ================= -->
     <div id="tab-galleryTab" class="tab-content hidden">
       <div class="bg-gray-900 p-4 md:p-6 rounded-2xl shadow-xl border border-gray-800 space-y-4">
         <div class="flex justify-between items-center border-b border-gray-800 pb-3">
           <div>
-            <h2 class="text-xl font-bold text-purple-400">📸 คลังรูปภาพงานซ่อมทั้งหมด</h2>
-            <p class="text-xs text-gray-400 mt-1">อัปโหลด จัดการ ดาวน์โหลด หรือลบรูปภาพในระบบ</p>
+            <h2 class="text-xl font-bold text-purple-400">📸 คลังรูปภาพระหว่างเครื่อง</h2>
+            <p class="text-xs text-gray-400 mt-1">พื้นที่อัปโหลด/โหลดรูปภาพข้ามอุปกรณ์ (ไม่เกี่ยวกับประวัติบิล)</p>
           </div>
           <label class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl text-xs font-bold shadow cursor-pointer transition-all">
-            + อัปโหลดรูปภาพใหม่ <input type="file" id="globalGalleryUpload" accept="image/*" multiple class="hidden" onchange="uploadGlobalImages(this)">
+            + อัปโหลดรูปภาพ <input type="file" id="globalGalleryUpload" accept="image/*" multiple class="hidden" onchange="uploadGlobalImages(this)">
           </label>
         </div>
         <div id="globalGalleryContainer" class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
@@ -217,11 +219,13 @@
           </div>
           <div>
             <label class="font-bold text-gray-300">ราคาทุน</label>
-            <input type="number" id="cost_price" class="w-full border border-gray-700 p-1.5 rounded-lg bg-gray-900 text-white mt-1" value="0">
+            <!-- เพิ่ม step="any" เพื่อรองรับทศนิยม -->
+            <input type="number" step="any" id="cost_price" class="w-full border border-gray-700 p-1.5 rounded-lg bg-gray-900 text-white mt-1" value="0">
           </div>
           <div>
             <label class="font-bold text-gray-300">ราคาขาย</label>
-            <input type="number" id="sale_price" class="w-full border border-gray-700 p-1.5 rounded-lg bg-gray-900 text-white mt-1" value="0">
+            <!-- เพิ่ม step="any" เพื่อรองรับทศนิยม -->
+            <input type="number" step="any" id="sale_price" class="w-full border border-gray-700 p-1.5 rounded-lg bg-gray-900 text-white mt-1" value="0">
           </div>
           <div class="col-span-2 md:col-span-1">
             <label class="font-bold text-gray-300">แหล่งซื้อ</label>

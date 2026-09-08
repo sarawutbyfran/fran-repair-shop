@@ -10,22 +10,52 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// ✅ แก้ไข: เช็ค Path ให้ชี้ไปที่ Persistent Disk (เช่น /data) เสมอ แบบเดียวกับ database
+// ตั้งค่า Path สำหรับ Persistent Disk
 const fallbackDir = fs.existsSync('/data') ? '/data' : path.join(__dirname, 'data');
 const diskPath = process.env.RENDER_DISK_PATH || fallbackDir;
 const uploadDir = path.join(diskPath, 'uploads');
+const galleryDir = path.join(diskPath, 'gallery'); // โฟลเดอร์แยกสำหรับคลังรูปภาพทั่วไป
 
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+if (!fs.existsSync(galleryDir)) fs.mkdirSync(galleryDir, { recursive: true });
 
 app.use('/uploads', express.static(uploadDir));
+app.use('/gallery', express.static(galleryDir)); // เสิร์ฟไฟล์จากโฟลเดอร์คลังรูป
 
+// ตัวจัดการอัปโหลดสำหรับรูปบิลซ่อม
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
 });
 const upload = multer({ storage });
+
+// ตัวจัดการอัปโหลดสำหรับคลังรูปภาพอิสระ (Gallery)
+const galleryStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, galleryDir),
+  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname.replace(/\s/g, '_'))
+});
+const uploadGallery = multer({ storage: galleryStorage });
+
+// ================= API คลังรูปภาพอิสระ (Gallery) =================
+app.get('/api/gallery', (req, res) => {
+  fs.readdir(galleryDir, (err, files) => {
+    if (err) return res.status(500).json([]);
+    // ส่ง path ของไฟล์กลับไป
+    res.json(files.map(f => `/gallery/${f}`));
+  });
+});
+
+app.post('/api/gallery', uploadGallery.array('images', 20), (req, res) => {
+  res.json({ success: true });
+});
+
+app.delete('/api/gallery/:filename', (req, res) => {
+  const filepath = path.join(galleryDir, req.params.filename);
+  if (fs.existsSync(filepath)) {
+    fs.unlinkSync(filepath);
+  }
+  res.json({ success: true });
+});
 
 // ================= API คลังอะไหล่ =================
 app.get('/api/parts', (req, res) => {
@@ -105,14 +135,12 @@ app.post('/api/repairs', upload.array('repair_images', 10), (req, res) => {
   }
 });
 
-// ✅ แก้ไข: รองรับการลบรูปภาพจากหน้าเว็บ เพื่อให้ฐานข้อมูลอัปเดตไฟล์ล่าสุดเสมอ
 app.put('/api/repairs/:id', upload.array('repair_images', 10), (req, res) => {
   const id = req.params.id;
   const { customer_name, customer_address, repair_sender, amp_class, amp_brand, amp_power, symptom, status, items, existing_image_path } = req.body;
   const parsedItems = items ? JSON.parse(items) : [];
 
   db.get("SELECT image_path FROM repairs WHERE id = ?", [id], (err, row) => {
-    // ใช้ existing_image_path ที่ส่งมาจาก Frontend หากมีการลบรูป
     let final_image_path = existing_image_path !== undefined ? existing_image_path : (row ? row.image_path : '');
     
     if (req.files && req.files.length > 0) {
@@ -136,23 +164,16 @@ app.put('/api/repairs/:id', upload.array('repair_images', 10), (req, res) => {
   });
 });
 
-// ✅ เพิ่มใหม่: API สำหรับลบบิล และลบไฟล์รูปภาพออกจาก Disk อย่างสมบูรณ์
 app.delete('/api/repairs/:id', (req, res) => {
   const id = req.params.id;
-  
   db.get("SELECT image_path FROM repairs WHERE id = ?", [id], (err, row) => {
-    // จัดการลบรูปภาพจาก Disk
     if (row && row.image_path) {
       const paths = row.image_path.split(',');
       paths.forEach(p => {
         const filePath = path.join(uploadDir, path.basename(p));
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       });
     }
-    
-    // จัดการลบข้อมูลบิล
     db.run(`DELETE FROM repair_items WHERE repair_id = ?`, [id], () => {
       db.run(`DELETE FROM repairs WHERE id = ?`, [id], function(err) {
         if (err) return res.status(500).json({ error: err.message });
