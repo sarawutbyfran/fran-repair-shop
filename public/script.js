@@ -92,7 +92,6 @@ async function uploadGlobalImages(inputElem) {
   for (let i = 0; i < inputElem.files.length; i++) {
     formData.append('images', inputElem.files[i]);
   }
-  // เรียกใช้ API /api/gallery แทน เพื่อไม่ให้เกิดประวัติบิลหลอก
   const res = await fetch('/api/gallery', { method: 'POST', body: formData });
   if (res.ok) {
     alert('อัปโหลดรูปลงคลังสำเร็จ!');
@@ -110,20 +109,17 @@ async function deleteGalleryImage(filename) {
 }
 // -----------------------------------------------------------
 
-// ----------------- อัปเดตตัวเลือกชนิดอะไหล่หลังบ้าน -----------------
 function updateAllTypeDropdowns() {
   const uniqueTypes = [...new Set(globalPartsData.map(p => p.part_type).filter(t => t))];
   let typeOptions = `<option value="">- เลือกชนิด -</option>`;
   uniqueTypes.forEach(t => { typeOptions += `<option value="${t}">${t}</option>`; });
 
-  // อัปเดต dropdown ทุกแถวในหน้าบิล โดยยังคงค่าเดิมที่เลือกไว้
   document.querySelectorAll('#itemsTable select').forEach(select => {
     const currentVal = select.value;
     select.innerHTML = typeOptions;
     select.value = currentVal;
   });
 }
-// -----------------------------------------------------------
 
 function addItemRow() {
   const tbody = document.getElementById('itemsTable');
@@ -135,8 +131,8 @@ function addItemRow() {
 
   tr.innerHTML = `
     <td class="p-1.5 text-center font-bold row-num text-gray-900"></td>
-    <td class="p-1.5 flex gap-1 relative">
-      <select class="w-1/3 p-1 border rounded bg-white text-xs text-gray-900" onchange="filterPartsByType(this)">
+    <td class="p-1.5 flex gap-1 relative item-row-container">
+      <select class="w-1/3 p-1 border rounded bg-white text-xs text-gray-900 item-type-select" onchange="filterPartsByType(this)">
         ${typeOptions}
       </select>
       <div class="w-2/3 relative">
@@ -302,7 +298,6 @@ async function loadPartsDatabase() {
           </tr>`;
       });
     }
-    // อัปเดต Dropdown ในบิลทันทีเมื่อฐานข้อมูลโหลดเสร็จ
     updateAllTypeDropdowns();
   } catch (e) {
     console.error('Failed to load parts', e);
@@ -403,7 +398,7 @@ async function loadHistory() {
           <div class="flex justify-center gap-1.5">
             <button onclick="togglePay(${item.id}, ${item.is_paid ? 0 : 1})" class="px-2.5 py-1 rounded-xl text-white text-xs font-bold ${item.is_paid ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-rose-600 hover:bg-rose-500'} shadow transition-all">${item.is_paid ? '✓ จ่ายแล้ว' : '✕ ค้าง'}</button>
             <button onclick="editRepair(${item.id})" class="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-gray-900 rounded-xl text-xs font-bold shadow transition-all">แก้ไข</button>
-            <button onclick="deleteRepair(${item.id})" class="px-2 py-1 bg-red-700 hover:bg-red-800 text-white rounded-xl text-xs font-bold shadow transition-all">ลบ</button>
+            <button onclick="deleteRepair(${item.id})" class="px-2.5 py-1 bg-red-700 hover:bg-red-800 text-white rounded-xl text-xs font-bold shadow transition-all">ลบ</button>
           </div>
         </td>
       `;
@@ -476,7 +471,6 @@ async function togglePay(id, status) {
   loadDashboardStats();
 }
 
-// ----------------- ค้นหาและจับคู่ "ชนิดอะไหล่" ตอนกดแก้ไขบิล -----------------
 async function editRepair(id) {
   const res = await fetch(`/api/repairs/${id}`);
   const data = await res.json();
@@ -511,7 +505,6 @@ async function editRepair(id) {
       currentRow.querySelector('.item-qty').value = data.items[i].quantity;
       currentRow.querySelector('.item-price').value = data.items[i].unit_price;
 
-      // ค้นหาว่าเป็นอะไหล่ชนิดไหนในระบบ เพื่อเซ็ตค่ากลับให้ตรงกัน
       const matchedPart = globalPartsData.find(p => p.part_name === partName);
       if (matchedPart) {
         currentRow.querySelector('select').value = matchedPart.part_type;
@@ -526,7 +519,6 @@ async function editRepair(id) {
   submitBtn.innerText = "อัปเดตบิลซ่อม";
   submitBtn.classList.replace('bg-emerald-600', 'bg-amber-600');
 }
-// -------------------------------------------------------------------------
 
 function resetForm() {
   document.getElementById('repairForm').reset();
@@ -568,11 +560,16 @@ document.getElementById('repairForm').addEventListener('submit', async (e) => {
     price: document.querySelector('#laborRow .item-price').value || 0
   });
 
+  // บันทึกรายการอะไหล่โดยรวมชนิดและชื่อเข้าด้วยกัน เช่น "(IC) LM339"
   document.querySelectorAll('#itemsTable tr:not(#laborRow)').forEach(row => {
+    const type = row.querySelector('.item-type-select')?.value;
     const name = row.querySelector('.item-search')?.value;
     const qty = row.querySelector('.item-qty')?.value;
     const price = row.querySelector('.item-price')?.value;
-    if (name) items.push({ name, qty, price });
+    if (name) {
+      const combinedName = type ? `(${type}) ${name}` : name;
+      items.push({ name: combinedName, qty, price });
+    }
   });
   formData.append('items', JSON.stringify(items));
 
@@ -602,13 +599,40 @@ async function deleteRepair(id) {
   }
 }
 
-// ----------------- แก้ไขฟังก์ชันการแคปเจอร์รูป (ใช้ line-height แทน flexbox) -----------------
+// ----------------- ฟังก์ชันดาวน์โหลดรูปบิล (รวมชนิดและชื่อรายการให้ชิดกัน) -----------------
 function downloadBillImage() {
   const billArea = document.getElementById('billArea');
   const hideElements = billArea.querySelectorAll('.hide-on-print');
   hideElements.forEach(el => el.style.display = 'none');
 
-  const inputs = billArea.querySelectorAll('input:not([type="hidden"]), select');
+  // จัดการรวมข้อความ ชนิด และ ชื่ออะไหล่ ในตารางชั่วคราวก่อนแคปรูป
+  const itemRows = document.querySelectorAll('#itemsTable tr:not(#laborRow)');
+  const itemReplacedData = [];
+  
+  itemRows.forEach(row => {
+    const select = row.querySelector('.item-type-select');
+    const input = row.querySelector('.item-search');
+    if (select && input && input.value.trim() !== '') {
+      const typeVal = select.value;
+      const nameVal = input.value;
+      const combinedText = typeVal ? `(${typeVal}) ${nameVal}` : nameVal;
+      
+      const parentTd = input.closest('td');
+      const tempSpan = document.createElement('div');
+      tempSpan.innerText = combinedText;
+      tempSpan.style.fontSize = '12px';
+      tempSpan.style.padding = '0 4px';
+      tempSpan.style.height = (input.offsetHeight > 0 ? input.offsetHeight : 28) + 'px';
+      tempSpan.style.lineHeight = (input.offsetHeight > 0 ? input.offsetHeight : 28) + 'px';
+      
+      parentTd.insertBefore(tempSpan, select);
+      select.style.display = 'none';
+      input.style.display = 'none';
+      itemReplacedData.push({ select, input, tempSpan });
+    }
+  });
+
+  const inputs = billArea.querySelectorAll('input:not([type="hidden"]):not(.item-search):not(.item-qty):not(.item-price), select:not(.item-type-select)');
   const replacements = [];
   
   inputs.forEach(el => {
@@ -617,12 +641,11 @@ function downloadBillImage() {
     
     const span = document.createElement('div');
     span.innerText = val;
-    span.style.display = 'block'; // เปลี่ยนจาก flex เป็น block เพื่อลดปัญหาความคลาดเคลื่อน
+    span.style.display = 'block';
     
-    // ตั้งค่าความสูงของกล่องและการจัดกึ่งกลาง
     const elHeight = el.offsetHeight > 0 ? el.offsetHeight : 28;
     span.style.height = elHeight + 'px';
-    span.style.lineHeight = elHeight + 'px'; // ใช้ line-height ควบคุมให้อยู่ตรงกลางบรรทัด
+    span.style.lineHeight = elHeight + 'px';
     span.style.width = '100%';
     span.style.fontSize = '12px';
     span.style.fontWeight = el.classList.contains('font-bold') ? 'bold' : 'normal';
@@ -634,12 +657,7 @@ function downloadBillImage() {
     
     span.style.background = 'transparent';
     span.style.padding = '0 4px';
-    
-    if (!el.closest('#itemsTable')) {
-      span.style.borderBottom = '1px solid #9ca3af';
-    } else {
-      span.style.border = 'none';
-    }
+    span.style.borderBottom = '1px solid #9ca3af';
     
     el.parentNode.insertBefore(span, el);
     const originalDisplay = el.style.display;
@@ -652,9 +670,16 @@ function downloadBillImage() {
   html2canvas(billArea, { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' }).then(canvas => {
     billArea.classList.remove('capturing-canvas');
     hideElements.forEach(el => el.style.display = '');
+    
     replacements.forEach(r => {
       r.span.remove();
       r.el.style.display = r.originalDisplay;
+    });
+
+    itemReplacedData.forEach(item => {
+      item.tempSpan.remove();
+      item.select.style.display = '';
+      item.input.style.display = '';
     });
 
     const imageURL = canvas.toDataURL("image/png");
@@ -680,6 +705,10 @@ function downloadBillImage() {
     billArea.classList.remove('capturing-canvas');
     hideElements.forEach(el => el.style.display = '');
     replacements.forEach(r => { r.span.remove(); r.el.style.display = r.originalDisplay; });
+    itemReplacedData.forEach(item => {
+      item.tempSpan.remove();
+      item.select.style.display = '';
+      item.input.style.display = '';
+    });
   });
 }
-// ------------------------------------------------------------------------------------------
