@@ -560,7 +560,6 @@ document.getElementById('repairForm').addEventListener('submit', async (e) => {
     price: document.querySelector('#laborRow .item-price').value || 0
   });
 
-  // บันทึกรายการอะไหล่โดยรวมชนิดและชื่อเข้าด้วยกัน เช่น "(IC) LM339"
   document.querySelectorAll('#itemsTable tr:not(#laborRow)').forEach(row => {
     const type = row.querySelector('.item-type-select')?.value;
     const name = row.querySelector('.item-search')?.value;
@@ -599,20 +598,51 @@ async function deleteRepair(id) {
   }
 }
 
-// ----------------- ฟังก์ชันดาวน์โหลดรูปบิล (รวมชนิดและชื่อรายการให้ชิดกัน) -----------------
+// ----------------- แก้ไขฟังก์ชันดาวน์โหลดรูปบิลให้แสดงผลข้อมูลครบถ้วน -----------------
 function downloadBillImage() {
   const billArea = document.getElementById('billArea');
   const hideElements = billArea.querySelectorAll('.hide-on-print');
   hideElements.forEach(el => el.style.display = 'none');
 
-  // จัดการรวมข้อความ ชนิด และ ชื่ออะไหล่ ในตารางชั่วคราวก่อนแคปรูป
-  const itemRows = document.querySelectorAll('#itemsTable tr:not(#laborRow)');
+  // 1. จัดการแปลงแถวตารางรายการอะไหล่ให้รวม (ชนิด) + ชื่อ และดึงจำนวน/หน่วยละมาแสดงผลเป็นตัวอักษร
+  const itemRows = document.querySelectorAll('#itemsTable tr');
   const itemReplacedData = [];
   
-  itemRows.forEach(row => {
+  itemRows.forEach((row, idx) => {
     const select = row.querySelector('.item-type-select');
     const input = row.querySelector('.item-search');
-    if (select && input && input.value.trim() !== '') {
+    const qtyInput = row.querySelector('.item-qty');
+    const priceInput = row.querySelector('.item-price');
+    
+    if (idx === 0) {
+      // แถวแรก (ค่าแรง/รายการซ่อมหลัก)
+      const laborDesc = row.querySelector('#labor_desc');
+      const qtyIn = row.querySelector('.item-qty');
+      const priceIn = row.querySelector('.item-price');
+      if (laborDesc && qtyIn && priceIn) {
+        const tdDesc = laborDesc.closest('td');
+        const tdQty = qtyIn.closest('td');
+        const tdPrice = priceIn.closest('td');
+
+        const sDesc = document.createElement('div');
+        sDesc.innerText = laborDesc.value;
+        sDesc.style.fontSize = '12px'; sDesc.style.padding = '0 4px'; sDesc.style.height = '28px'; sDesc.style.lineHeight = '28px';
+        tdDesc.insertBefore(sDesc, laborDesc); laborDesc.style.display = 'none';
+
+        const sQty = document.createElement('div');
+        sQty.innerText = qtyIn.value;
+        sQty.style.fontSize = '12px'; sQty.style.textAlign = 'center'; sQty.style.height = '28px'; sQty.style.lineHeight = '28px';
+        tdQty.insertBefore(sQty, qtyIn); qtyIn.style.display = 'none';
+
+        const sPrice = document.createElement('div');
+        sPrice.innerText = priceIn.value;
+        sPrice.style.fontSize = '12px'; sPrice.style.textAlign = 'right'; sPrice.style.padding = '0 4px'; sPrice.style.height = '28px'; sPrice.style.lineHeight = '28px';
+        tdPrice.insertBefore(sPrice, priceIn); priceIn.style.display = 'none';
+
+        itemReplacedData.push({ el: laborDesc, span: sDesc }, { el: qtyIn, span: sQty }, { el: priceIn, span: sPrice });
+      }
+    } else if (select && input && input.value.trim() !== '') {
+      // แถวรายการอะไหล่
       const typeVal = select.value;
       const nameVal = input.value;
       const combinedText = typeVal ? `(${typeVal}) ${nameVal}` : nameVal;
@@ -622,16 +652,35 @@ function downloadBillImage() {
       tempSpan.innerText = combinedText;
       tempSpan.style.fontSize = '12px';
       tempSpan.style.padding = '0 4px';
-      tempSpan.style.height = (input.offsetHeight > 0 ? input.offsetHeight : 28) + 'px';
-      tempSpan.style.lineHeight = (input.offsetHeight > 0 ? input.offsetHeight : 28) + 'px';
+      tempSpan.style.height = '28px';
+      tempSpan.style.lineHeight = '28px';
       
       parentTd.insertBefore(tempSpan, select);
       select.style.display = 'none';
       input.style.display = 'none';
       itemReplacedData.push({ select, input, tempSpan });
+
+      if (qtyInput) {
+        const qtyTd = qtyInput.closest('td');
+        const qSpan = document.createElement('div');
+        qSpan.innerText = qtyInput.value;
+        qSpan.style.fontSize = '12px'; qSpan.style.textAlign = 'center'; qSpan.style.height = '28px'; qSpan.style.lineHeight = '28px';
+        qtyTd.insertBefore(qSpan, qtyInput); qtyInput.style.display = 'none';
+        itemReplacedData.push({ el: qtyInput, span: qSpan });
+      }
+
+      if (priceInput) {
+        const priceTd = priceInput.closest('td');
+        const pSpan = document.createElement('div');
+        pSpan.innerText = priceInput.value;
+        pSpan.style.fontSize = '12px'; pSpan.style.textAlign = 'right'; pSpan.style.padding = '0 4px'; pSpan.style.height = '28px'; pSpan.style.lineHeight = '28px';
+        priceTd.insertBefore(pSpan, priceInput); priceInput.style.display = 'none';
+        itemReplacedData.push({ el: priceInput, span: pSpan });
+      }
     }
   });
 
+  // 2. จัดการข้อมูลส่วนหัวบิล (ชื่อลูกค้า ที่อยู่ เลขที่ วันที่)
   const inputs = billArea.querySelectorAll('input:not([type="hidden"]):not(.item-search):not(.item-qty):not(.item-price), select:not(.item-type-select)');
   const replacements = [];
   
@@ -677,9 +726,11 @@ function downloadBillImage() {
     });
 
     itemReplacedData.forEach(item => {
-      item.tempSpan.remove();
-      item.select.style.display = '';
-      item.input.style.display = '';
+      if (item.tempSpan) item.tempSpan.remove();
+      if (item.select) item.select.style.display = '';
+      if (item.input) item.input.style.display = '';
+      if (item.span) item.span.remove();
+      if (item.el) item.el.style.display = '';
     });
 
     const imageURL = canvas.toDataURL("image/png");
@@ -706,9 +757,11 @@ function downloadBillImage() {
     hideElements.forEach(el => el.style.display = '');
     replacements.forEach(r => { r.span.remove(); r.el.style.display = r.originalDisplay; });
     itemReplacedData.forEach(item => {
-      item.tempSpan.remove();
-      item.select.style.display = '';
-      item.input.style.display = '';
+      if (item.tempSpan) item.tempSpan.remove();
+      if (item.select) item.select.style.display = '';
+      if (item.input) item.input.style.display = '';
+      if (item.span) item.span.remove();
+      if (item.el) item.el.style.display = '';
     });
   });
 }
