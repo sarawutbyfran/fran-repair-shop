@@ -453,35 +453,101 @@ document.getElementById('repairForm').addEventListener('submit', async (e) => {
   }
 });
 
-// 1. แก้ไขปุ่มดาวน์โหลดในมือถือ: เปิดรูปขึ้นมาในแท็บใหม่ให้กดค้างแล้วบันทึกลงอัลบั้มภาพได้ 100%
+// ฟังก์ชันปิดหน้าต่างดูรูปบิล
+function closeBillPreview() {
+  document.getElementById('billPreviewModal').style.display = 'none';
+}
+
+// ฟังก์ชันดาวน์โหลดภาพบิลที่ปรับปรุงใหม่ (แปลง input เป็นข้อความก่อนแคป)
 function downloadBillImage() {
   const billArea = document.getElementById('billArea');
   
+  // 1. ซ่อนปุ่มและส่วนที่ไม่ต้องการพิมพ์
+  const hideElements = billArea.querySelectorAll('.hide-on-print');
+  hideElements.forEach(el => el.style.display = 'none');
+
+  // 2. แปลง <input> และ <select> เป็น <div> ข้อความธรรมดา เพื่อแก้ปัญหาอักษรหลุดขอบ
+  const inputs = billArea.querySelectorAll('input, select');
+  const replacements = [];
+  
+  inputs.forEach(el => {
+    // ดึงค่าข้อความออกมา
+    const val = el.tagName === 'SELECT' ? (el.options[el.selectedIndex]?.text || '') : el.value;
+    
+    // สร้าง <div> ปลอมขึ้นมาแทนที่
+    const span = document.createElement('div');
+    span.innerText = val;
+    span.className = el.className; // ใช้คลาสเดียวกับ input เป๊ะๆ
+    
+    // จัด Style ให้เหมือนกล่อง Input เดิมเพื่อรักษา Layout
+    span.style.display = 'flex';
+    span.style.alignItems = 'center';
+    span.style.minHeight = el.offsetHeight > 0 ? el.offsetHeight + 'px' : '28px';
+    if (el.classList.contains('text-right')) span.style.justifyContent = 'flex-end';
+    if (el.classList.contains('text-center')) span.style.justifyContent = 'center';
+    span.style.padding = '0 4px';
+    span.style.background = el.style.background || (el.classList.contains('bg-white') ? '#ffffff' : 'transparent');
+    
+    // นำไปใส่แทนที่
+    el.parentNode.insertBefore(span, el);
+    
+    // เก็บสถานะเดิมไว้เพื่อซ่อน input จริง
+    const originalDisplay = el.style.display;
+    el.style.display = 'none';
+    
+    replacements.push({ el, span, originalDisplay });
+  });
+
+  // 3. กำหนดคลาสล็อคความกว้างบิลให้คงที่
   billArea.classList.add('capturing-canvas');
-  const deleteBtns = billArea.querySelectorAll('.hide-on-print');
-  deleteBtns.forEach(el => el.style.display = 'none');
 
-  html2canvas(billArea, { scale: 2, useCORS: true, logging: false }).then(canvas => {
+  // 4. เริ่มทำการแคปเจอร์รูปภาพ
+  html2canvas(billArea, { 
+    scale: 2, 
+    useCORS: true, 
+    logging: false,
+    backgroundColor: '#ffffff'
+  }).then(canvas => {
+    // 5. คืนค่าการแสดงผลทุกอย่างกลับเป็นปกติทันที
     billArea.classList.remove('capturing-canvas');
-    deleteBtns.forEach(el => el.style.display = '');
+    hideElements.forEach(el => el.style.display = '');
+    replacements.forEach(r => {
+      r.span.remove(); // ลบ div ปลอมทิ้ง
+      r.el.style.display = r.originalDisplay; // โชว์ input จริงกลับมา
+    });
 
+    // 6. ประมวลผลรูปภาพและดาวน์โหลด/โชว์ Modal
     const imageURL = canvas.toDataURL("image/png");
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    // ตรวจสอบมือถือ หรือจอเล็ก
+    const isMobile = window.innerWidth <= 768 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     if (isMobile) {
-      // บนมือถือ โชว์รูปผ่าน Modal ในหน้าเดิมเลย 100% ไม่ติด Pop-up blocker
+      // เปิด Modal โชว์รูปภาพในมือถือ
       const modal = document.getElementById('billPreviewModal');
       const imgElem = document.getElementById('billImageElement');
       imgElem.src = imageURL;
-      modal.classList.remove('hidden');
+      modal.style.display = 'flex'; // บังคับโชว์ชัวร์ๆ
     } else {
-      // สำหรับคอมพิวเตอร์ โหลดลงเครื่องตามปกติ
+      // โหลดไฟล์ลงเครื่องอัตโนมัติบน PC
       const link = document.createElement('a');
-      link.download = `Bill-${document.getElementById('bill_no').value}.png`;
+      const billNo = document.getElementById('bill_no').value || 'repair';
+      link.download = `Bill-${billNo}.png`;
       link.href = imageURL;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     }
+  }).catch(err => {
+    console.error("เกิดข้อผิดพลาดในการสร้างรูป:", err);
+    alert("เกิดข้อผิดพลาดในการสร้างรูปบิล กรุณาลองใหม่");
+    
+    // หาก Error ก็ต้องคืนค่าหน้าเว็บให้กลับมาใช้งานต่อได้
+    billArea.classList.remove('capturing-canvas');
+    hideElements.forEach(el => el.style.display = '');
+    replacements.forEach(r => {
+      r.span.remove();
+      r.el.style.display = r.originalDisplay;
+    });
   });
 }

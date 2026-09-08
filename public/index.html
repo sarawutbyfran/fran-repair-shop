@@ -177,12 +177,12 @@
   </div>
 
   <!-- Modal โชว์รูปบิลสำหรับกดค้างเพื่อบันทึกลงเครื่อง (แก้ปัญหา iOS/มือถือ) -->
-  <div id="billPreviewModal" class="fixed inset-0 bg-black bg-opacity-90 z-[60] hidden flex flex-col justify-center items-center p-4">
+  <div id="billPreviewModal" class="fixed inset-0 bg-black bg-opacity-90 z-50 flex-col justify-center items-center p-4" style="display: none;">
     <div class="flex justify-between items-center w-full max-w-md mb-2">
       <p class="text-white text-sm font-bold animate-pulse">👉 กดค้างที่รูปภาพเพื่อบันทึก</p>
-      <button onclick="closeBillPreview()" class="bg-red-500 text-white font-bold px-3 py-1 rounded">✕ ปิด</button>
+      <button onclick="closeBillPreview()" class="bg-red-500 text-white font-bold px-3 py-1 rounded shadow">✕ ปิด</button>
     </div>
-    <div class="w-full max-w-md overflow-y-auto max-h-[85vh] bg-white rounded flex justify-center p-2">
+    <div class="w-full max-w-md overflow-y-auto max-h-[85vh] bg-white rounded flex justify-center p-2 relative">
       <img id="billImageElement" src="" class="w-full h-auto rounded shadow-lg border">
     </div>
   </div>
