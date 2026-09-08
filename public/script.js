@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupInitialData();
   await loadPartsDatabase();
   loadHistory();
+  loadDashboardStats();
   addItemRow();
   
   const sideBoxContent = document.getElementById('sideBoxContent');
@@ -35,21 +36,50 @@ function updateLaborDesc() {
   document.getElementById('labor_desc').value = desc;
 }
 
-// เพิ่มแถวรายการ พร้อมระบบพิมพ์ค้นหาเบอร์อะไหล่
+// อัปเดตสถิติหน้า Dashboard ภาพรวม
+async function loadDashboardStats() {
+  try {
+    const resRepairs = await fetch('/api/repairs');
+    const repairsData = await resRepairs.json();
+    
+    let totalDebt = 0;
+    repairsData.forEach(item => {
+      if (!item.is_paid) {
+        totalDebt += parseFloat(item.grand_total || 0);
+      }
+    });
+
+    document.getElementById('dashTotalDebt').innerHTML = `${totalDebt.toLocaleString('th-TH', {minimumFractionDigits: 2})} <span class="text-sm font-normal text-gray-400">บาท</span>`;
+    document.getElementById('dashTotalJobs').innerHTML = `${repairsData.length} <span class="text-sm font-normal text-gray-400">รายการ</span>`;
+    document.getElementById('dashTotalParts').innerHTML = `${globalPartsData.length} <span class="text-sm font-normal text-gray-400">เบอร์/รายการ</span>`;
+  } catch(e) {
+    console.error('Failed to load dashboard stats', e);
+  }
+}
+
+// ระบบเลือกอะไหล่คู่ผสม (เลือกชนิด หรือ พิมพ์ค้นหา)
 function addItemRow() {
   const tbody = document.getElementById('itemsTable');
   const tr = document.createElement('tr');
   
+  const uniqueTypes = [...new Set(globalPartsData.map(p => p.part_type).filter(t => t))];
+  let typeOptions = `<option value="">- เลือกชนิด -</option>`;
+  uniqueTypes.forEach(t => { typeOptions += `<option value="${t}">${t}</option>`; });
+
   tr.innerHTML = `
-    <td class="p-1.5 text-center font-bold row-num"></td>
-    <td class="p-1.5 relative">
-      <input type="text" class="item-search w-full p-1 border rounded bg-white text-xs outline-none focus:ring-1 focus:ring-cyan-500" placeholder="🔍 พิมพ์ชื่อหรือเบอร์อะไหล่เพื่อค้นหา..." oninput="filterPartInput(this)" autocomplete="off">
-      <div class="suggestions-box absolute left-0 right-0 bg-white border border-gray-300 rounded shadow-lg max-h-40 overflow-y-auto z-50 hidden mt-1"></div>
-      <input type="hidden" class="item-name-hidden" value="">
+    <td class="p-1.5 text-center font-bold row-num text-gray-900"></td>
+    <td class="p-1.5 flex gap-1 relative">
+      <select class="w-1/3 p-1 border rounded bg-white text-xs text-gray-900" onchange="filterPartsByType(this)">
+        ${typeOptions}
+      </select>
+      <div class="w-2/3 relative">
+        <input type="text" class="item-search w-full p-1 border rounded bg-white text-xs text-gray-900 outline-none focus:ring-1 focus:ring-cyan-500" placeholder="🔍 พิมพ์ค้นหา..." oninput="filterPartInput(this)" autocomplete="off">
+        <div class="suggestions-box absolute left-0 right-0 bg-white border border-gray-300 rounded shadow-lg max-h-40 overflow-y-auto z-50 hidden mt-1"></div>
+      </div>
     </td>
-    <td class="p-1.5"><input type="number" class="item-qty w-full p-1 text-center border rounded text-xs" value="1" oninput="calculateTotal()"></td>
-    <td class="p-1.5"><input type="number" class="item-price w-full p-1 text-right border rounded text-xs" value="0" oninput="calculateTotal()"></td>
-    <td class="p-1.5 text-right item-total font-bold text-xs text-gray-700">0.00</td>
+    <td class="p-1.5"><input type="number" class="item-qty w-full p-1 text-center border rounded text-xs text-gray-900" value="1" oninput="calculateTotal()"></td>
+    <td class="p-1.5"><input type="number" class="item-price w-full p-1 text-right border rounded text-xs text-gray-900" value="0" oninput="calculateTotal()"></td>
+    <td class="p-1.5 text-right item-total font-bold text-xs text-gray-900">0.00</td>
     <td class="p-1.5 text-center hide-on-print"><button type="button" class="text-red-500 font-bold hover:text-red-700 text-xs" onclick="deleteRow(this)">X</button></td>
   `;
   tbody.appendChild(tr);
@@ -70,10 +100,30 @@ function deleteRow(btn) {
   calculateTotal();
 }
 
-// ระบบพิมพ์ค้นหาอะไหล่แบบเรียลไทม์
+function filterPartsByType(typeSelect) {
+  const selectedType = typeSelect.value;
+  const row = typeSelect.closest('tr');
+  const searchInput = row.querySelector('.item-search');
+  const box = row.querySelector('.suggestions-box');
+  
+  const filtered = selectedType ? globalPartsData.filter(p => p.part_type === selectedType) : globalPartsData;
+  
+  let html = '';
+  filtered.forEach(p => {
+    html += `<div class="p-2 text-xs hover:bg-cyan-50 cursor-pointer border-b flex justify-between items-center text-gray-900" onclick="selectPartItem(this, '${p.part_name}', ${p.sale_price})">
+      <span class="font-bold">${p.part_name}</span>
+      <span class="text-cyan-600 font-bold">${p.sale_price} ฿</span>
+    </div>`;
+  });
+  box.innerHTML = html;
+  box.classList.remove('hidden');
+  searchInput.focus();
+}
+
 function filterPartInput(inputElem) {
   const keyword = inputElem.value.toLowerCase().trim();
-  const box = inputElem.nextElementSibling;
+  const row = inputElem.closest('tr');
+  const box = row.querySelector('.suggestions-box');
   
   if (keyword.length === 0) {
     box.classList.add('hidden');
@@ -91,8 +141,8 @@ function filterPartInput(inputElem) {
 
   let html = '';
   matched.forEach(p => {
-    html += `<div class="p-2 text-xs hover:bg-cyan-50 cursor-pointer border-b flex justify-between items-center" onclick="selectPartItem(this, '${p.part_name}', ${p.sale_price})">
-      <span class="font-bold text-gray-800">${p.part_name}</span>
+    html += `<div class="p-2 text-xs hover:bg-cyan-50 cursor-pointer border-b flex justify-between items-center text-gray-900" onclick="selectPartItemAndType(this, '${p.part_type}', '${p.part_name}', ${p.sale_price})">
+      <span class="font-bold">${p.part_name} <span class="text-[10px] text-gray-500 font-normal">(${p.part_type})</span></span>
       <span class="text-cyan-600 font-bold">${p.sale_price} ฿</span>
     </div>`;
   });
@@ -102,17 +152,22 @@ function filterPartInput(inputElem) {
 
 function selectPartItem(elem, name, price) {
   const td = elem.closest('td');
-  const inputSearch = td.querySelector('.item-search');
-  const hiddenInput = td.querySelector('.item-name-hidden');
-  const box = td.querySelector('.suggestions-box');
-  
-  inputSearch.value = name;
-  hiddenInput.value = name;
-  box.classList.add('hidden');
+  td.querySelector('.item-search').value = name;
+  td.querySelector('.suggestions-box').classList.add('hidden');
   
   const row = td.closest('tr');
-  const priceInput = row.querySelector('.item-price');
-  priceInput.value = price;
+  row.querySelector('.item-price').value = price;
+  calculateTotal();
+}
+
+function selectPartItemAndType(elem, type, name, price) {
+  const td = elem.closest('td');
+  td.querySelector('select').value = type;
+  td.querySelector('.item-search').value = name;
+  td.querySelector('.suggestions-box').classList.add('hidden');
+  
+  const row = td.closest('tr');
+  row.querySelector('.item-price').value = price;
   calculateTotal();
 }
 
@@ -166,16 +221,16 @@ async function loadPartsDatabase() {
       displayData.forEach(p => {
         const profit = (p.sale_price - p.cost_price).toFixed(2);
         tbody.innerHTML += `
-          <tr class="hover:bg-gray-50">
-            <td class="p-2 border text-xs">${p.part_type || '-'}</td>
-            <td class="p-2 border font-bold text-xs">${p.part_name}</td>
-            <td class="p-2 border text-right text-red-600 text-xs">${p.cost_price}</td>
-            <td class="p-2 border text-right text-green-600 font-bold text-xs">${p.sale_price}</td>
-            <td class="p-2 border text-right text-blue-600 text-xs">${profit}</td>
-            <td class="p-2 border text-xs">${p.source || '-'}</td>
-            <td class="p-2 border text-center">
-              <button onclick="editPart(${p.id}, '${p.part_type}', '${p.part_name}', ${p.cost_price}, ${p.sale_price}, '${p.source || ''}')" class="bg-yellow-400 px-2 py-1 rounded text-xs font-bold">แก้ไข</button>
-              <button onclick="deletePart(${p.id})" class="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">ลบ</button>
+          <tr class="hover:bg-gray-800">
+            <td class="p-2 border-b border-gray-800 text-xs">${p.part_type || '-'}</td>
+            <td class="p-2 border-b border-gray-800 font-bold text-xs text-white">${p.part_name}</td>
+            <td class="p-2 border-b border-gray-800 text-right text-rose-400 text-xs">${p.cost_price}</td>
+            <td class="p-2 border-b border-gray-800 text-right text-emerald-400 font-bold text-xs">${p.sale_price}</td>
+            <td class="p-2 border-b border-gray-800 text-right text-cyan-400 text-xs">${profit}</td>
+            <td class="p-2 border-b border-gray-800 text-xs text-gray-400">${p.source || '-'}</td>
+            <td class="p-2 border-b border-gray-800 text-center">
+              <button onclick="editPart(${p.id}, '${p.part_type}', '${p.part_name}', ${p.cost_price}, ${p.sale_price}, '${p.source || ''}')" class="bg-amber-500 hover:bg-amber-600 text-gray-900 px-2 py-1 rounded text-xs font-bold mr-1">แก้ไข</button>
+              <button onclick="deletePart(${p.id})" class="bg-rose-600 hover:bg-rose-700 text-white px-2 py-1 rounded text-xs font-bold">ลบ</button>
             </td>
           </tr>`;
       });
@@ -212,13 +267,13 @@ function editPart(id, type, name, cost, sale, source) {
   document.getElementById('cost_price').value = cost;
   document.getElementById('sale_price').value = sale;
   document.getElementById('part_source').value = source;
-  document.getElementById('partSubmitBtn').innerText = "อัปเดต";
+  document.getElementById('partSubmitBtn').innerText = "อัปเดตอะไหล่";
 }
 
 function resetPartForm() {
   document.getElementById('addPartForm').reset();
   document.getElementById('edit_part_id').value = '';
-  document.getElementById('partSubmitBtn').innerText = "บันทึก";
+  document.getElementById('partSubmitBtn').innerText = "บันทึกอะไหล่";
 }
 
 async function deletePart(id) {
@@ -254,11 +309,11 @@ async function loadHistory() {
     cardsContainer.innerHTML = '';
 
     data.forEach(item => {
-      let imagesHTMLDesktop = item.image_path ? `<button onclick="openImageModal('${item.image_path}')" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded border font-bold hover:bg-purple-200">ดูรูป (${item.image_path.split(',').length})</button>` : '-';
-      let imagesHTMLMobile = item.image_path ? `<button onclick="openImageModal('${item.image_path}')" class="text-[11px] bg-purple-100 text-purple-700 px-1 py-1 rounded border font-bold">รูป (${item.image_path.split(',').length})</button>` : `<span class="text-xs text-center text-gray-400">ไม่มีรูป</span>`;
+      let imagesHTMLDesktop = item.image_path ? `<button onclick="openImageModal('${item.image_path}')" class="text-xs bg-purple-500/10 text-purple-400 border border-purple-500/30 px-2.5 py-1 rounded-lg font-bold hover:bg-purple-500/20">ดูรูป (${item.image_path.split(',').length})</button>` : '-';
+      let imagesHTMLMobile = item.image_path ? `<button onclick="openImageModal('${item.image_path}')" class="text-[11px] bg-purple-500/10 text-purple-400 border border-purple-500/30 px-1.5 py-1 rounded-lg font-bold">รูป (${item.image_path.split(',').length})</button>` : `<span class="text-xs text-center text-gray-500">ไม่มีรูป</span>`;
       
       const currentStatus = item.status || 'กำลังซ่อม';
-      let statusColor = currentStatus === 'ซ่อมเสร็จ' ? 'text-green-600' : (currentStatus === 'รออะไหล่' ? 'text-red-500' : 'text-orange-500');
+      let statusColor = currentStatus === 'ซ่อมเสร็จ' ? 'text-emerald-400' : (currentStatus === 'รออะไหล่' ? 'text-rose-400' : 'text-amber-400');
       const billTotal = parseFloat(item.grand_total || 0).toFixed(2);
       
       let summaryText = "แอมป์";
@@ -268,45 +323,45 @@ async function loadHistory() {
       if(item.symptom) summaryText += ` อาการ${item.symptom}`;
 
       const tr = document.createElement('tr');
-      tr.className = "hover:bg-gray-50";
+      tr.className = "hover:bg-gray-800 transition-all";
       tr.innerHTML = `
-        <td class="p-2 border font-bold text-cyan-700">${item.bill_no}<br><span class="text-xs text-gray-500">${item.date}</span><br><span class="text-xs text-blue-900 font-semibold">🔧 ${summaryText}</span></td>
-        <td class="p-2 border">${item.customer_name}</td>
-        <td class="p-2 border font-bold">${item.repair_sender || '-'}<br><span class="${statusColor} text-xs">${currentStatus}</span></td>
-        <td class="p-2 border text-right font-bold text-red-600">${billTotal}</td>
-        <td class="p-2 border text-center">${imagesHTMLDesktop}</td>
-        <td class="p-2 border text-center"><button onclick="togglePay(${item.id}, ${item.is_paid ? 0 : 1})" class="px-2 py-1 rounded text-white text-xs font-bold ${item.is_paid ? 'bg-green-500' : 'bg-red-500'} shadow">${item.is_paid ? '✓ จ่ายแล้ว' : '✕ ค้างชำระ'}</button></td>
-        <td class="p-2 border text-center"><button onclick="editRepair(${item.id})" class="px-2 py-1 bg-yellow-400 text-yellow-900 rounded text-xs font-bold hover:bg-yellow-500 shadow">แก้ไขบิล</button></td>
+        <td class="p-3 border-b border-gray-800 font-bold text-cyan-400">${item.bill_no}<br><span class="text-xs text-gray-400 font-normal">${item.date}</span><br><span class="text-xs text-gray-300 font-semibold">🔧 ${summaryText}</span></td>
+        <td class="p-3 border-b border-gray-800 text-white">${item.customer_name}</td>
+        <td class="p-3 border-b border-gray-800 font-bold text-gray-300">${item.repair_sender || '-'}<br><span class="${statusColor} text-xs font-semibold">${currentStatus}</span></td>
+        <td class="p-3 border-b border-gray-800 text-right font-bold text-rose-400">${billTotal}</td>
+        <td class="p-3 border-b border-gray-800 text-center">${imagesHTMLDesktop}</td>
+        <td class="p-3 border-b border-gray-800 text-center"><button onclick="togglePay(${item.id}, ${item.is_paid ? 0 : 1})" class="px-3 py-1 rounded-xl text-white text-xs font-bold ${item.is_paid ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-rose-600 hover:bg-rose-500'} shadow transition-all">${item.is_paid ? '✓ จ่ายแล้ว' : '✕ ค้างชำระ'}</button></td>
+        <td class="p-3 border-b border-gray-800 text-center"><button onclick="editRepair(${item.id})" class="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-gray-900 rounded-xl text-xs font-bold shadow transition-all">แก้ไขบิล</button></td>
       `;
       tbody.appendChild(tr);
 
       const card = document.createElement('div');
-      card.className = "bg-white border rounded-lg shadow-sm p-3 space-y-2 relative";
+      card.className = "bg-gray-800 border border-gray-700 rounded-2xl shadow-lg p-4 space-y-2.5 relative";
       card.innerHTML = `
-        <div class="flex justify-between items-start border-b pb-2">
+        <div class="flex justify-between items-start border-b border-gray-700 pb-2">
           <div>
-            <div class="font-bold text-cyan-700 text-sm">${item.bill_no}</div>
-            <div class="text-[11px] text-gray-500">${item.date}</div>
+            <div class="font-bold text-cyan-400 text-sm">${item.bill_no}</div>
+            <div class="text-[11px] text-gray-400">${item.date}</div>
           </div>
           <div class="text-right">
-            <span class="${statusColor} text-[11px] font-bold bg-gray-50 border px-1.5 py-0.5 rounded">${currentStatus}</span>
-            <div class="text-[11px] text-gray-600 mt-1 font-bold">ช่าง: ${item.repair_sender || '-'}</div>
+            <span class="${statusColor} text-[11px] font-bold bg-gray-900 border border-gray-700 px-2 py-0.5 rounded-lg">${currentStatus}</span>
+            <div class="text-[11px] text-gray-300 mt-1 font-bold">ช่าง: ${item.repair_sender || '-'}</div>
           </div>
         </div>
         <div class="text-xs">
-          <div><span class="font-bold text-gray-700">ลค:</span> ${item.customer_name}</div>
-          <div class="text-blue-800 font-semibold mt-1">🔧 ${summaryText}</div>
+          <div class="text-white"><span class="font-bold text-gray-400">ลูกค้า:</span> ${item.customer_name}</div>
+          <div class="text-cyan-300 font-semibold mt-1">🔧 ${summaryText}</div>
         </div>
-        <div class="flex justify-between items-center bg-red-50 p-1.5 rounded border border-red-100 mt-1">
-          <span class="text-xs font-bold text-red-800">ยอดเงิน:</span>
-          <span class="font-bold text-red-600 text-sm">${billTotal} ฿</span>
+        <div class="flex justify-between items-center bg-gray-900 p-2 rounded-xl border border-gray-700 mt-1">
+          <span class="text-xs font-bold text-gray-300">ยอดเงินรวม:</span>
+          <span class="font-bold text-rose-400 text-sm">${billTotal} ฿</span>
         </div>
-        <div class="grid grid-cols-3 gap-1.5 mt-2">
+        <div class="grid grid-cols-3 gap-2 pt-1">
           ${imagesHTMLMobile}
-          <button onclick="togglePay(${item.id}, ${item.is_paid ? 0 : 1})" class="py-1 rounded text-white text-[11px] font-bold ${item.is_paid ? 'bg-green-500' : 'bg-red-500'} shadow">
+          <button onclick="togglePay(${item.id}, ${item.is_paid ? 0 : 1})" class="py-1.5 rounded-xl text-white text-[11px] font-bold ${item.is_paid ? 'bg-emerald-600' : 'bg-rose-600'} shadow">
             ${item.is_paid ? '✓ จ่ายแล้ว' : '✕ ค้างชำระ'}
           </button>
-          <button onclick="editRepair(${item.id})" class="py-1 bg-yellow-400 text-yellow-900 rounded text-[11px] font-bold shadow">
+          <button onclick="editRepair(${item.id})" class="py-1.5 bg-amber-500 text-gray-900 rounded-xl text-[11px] font-bold shadow">
             แก้ไขบิล
           </button>
         </div>
@@ -324,10 +379,10 @@ function openImageModal(imagePathsStr) {
   const paths = imagePathsStr.split(',');
   paths.forEach((path, index) => {
     container.innerHTML += `
-      <div class="bg-white border rounded-xl p-3 shadow-sm flex flex-col items-center">
-        <span class="text-xs font-bold text-gray-500 mb-2 bg-gray-100 px-3 py-1 rounded-full">รูปที่ ${index + 1} / ${paths.length}</span>
-        <img src="${path}" class="w-full max-h-72 object-contain rounded border mb-3" alt="Repair Image">
-        <a href="${path}" download="repair-photo-${index+1}.png" target="_blank" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold hover:bg-blue-700 shadow flex justify-center items-center gap-2">
+      <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3 shadow-md flex flex-col items-center">
+        <span class="text-xs font-bold text-gray-300 mb-2 bg-gray-900 px-3 py-1 rounded-full border border-gray-700">รูปที่ ${index + 1} / ${paths.length}</span>
+        <img src="${path}" class="w-full max-h-72 object-contain rounded-xl border border-gray-700 bg-gray-900 mb-3" alt="Repair Image">
+        <a href="${path}" download="repair-photo-${index+1}.png" target="_blank" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-2 rounded-xl font-bold shadow flex justify-center items-center gap-2 transition-all">
           📥 บันทึกรูปลงเครื่อง
         </a>
       </div>
@@ -347,6 +402,7 @@ function closeImageModal() {
 async function togglePay(id, status) {
   await fetch(`/api/repairs/${id}/pay`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_paid: status }) });
   loadHistory();
+  loadDashboardStats();
 }
 
 async function editRepair(id) {
@@ -380,7 +436,6 @@ async function editRepair(id) {
       const partName = data.items[i].item_name;
       
       currentRow.querySelector('.item-search').value = partName;
-      currentRow.querySelector('.item-name-hidden').value = partName;
       currentRow.querySelector('.item-qty').value = data.items[i].quantity;
       currentRow.querySelector('.item-price').value = data.items[i].unit_price;
     }
@@ -391,7 +446,7 @@ async function editRepair(id) {
   window.scrollTo(0, 0);
   const submitBtn = document.querySelector('button[type="submit"]');
   submitBtn.innerText = "อัปเดตบิลซ่อม";
-  submitBtn.classList.replace('bg-green-600', 'bg-blue-600');
+  submitBtn.classList.replace('bg-emerald-600', 'bg-amber-600');
 }
 
 function resetForm() {
@@ -402,8 +457,8 @@ function resetForm() {
   addItemRow();
   document.getElementById('fileCount').innerText = 'ยังไม่ได้เลือกรูป';
   const submitBtn = document.querySelector('button[type="submit"]');
-  submitBtn.innerText = "บันทึกบิล";
-  submitBtn.classList.replace('bg-blue-600', 'bg-green-600');
+  submitBtn.innerText = "บันทึกบิลซ่อม";
+  submitBtn.classList.replace('bg-amber-600', 'bg-emerald-600');
 }
 
 document.getElementById('repairForm').addEventListener('submit', async (e) => {
@@ -450,6 +505,7 @@ document.getElementById('repairForm').addEventListener('submit', async (e) => {
     alert(editId ? 'อัปเดตบิลสำเร็จ!' : 'บันทึกบิลสำเร็จ!');
     resetForm();
     loadHistory();
+    loadDashboardStats();
   }
 });
 
@@ -467,6 +523,7 @@ function downloadBillImage() {
   
   inputs.forEach(el => {
     let val = el.tagName === 'SELECT' ? (el.options[el.selectedIndex]?.text || '') : el.value;
+    if (val.includes('- เลือก')) val = '';
     
     const span = document.createElement('div');
     span.innerText = val;
