@@ -36,7 +36,6 @@ function updateLaborDesc() {
   document.getElementById('labor_desc').value = desc;
 }
 
-// อัปเดตสถิติหน้า Dashboard ภาพรวม
 async function loadDashboardStats() {
   try {
     const resRepairs = await fetch('/api/repairs');
@@ -57,7 +56,116 @@ async function loadDashboardStats() {
   }
 }
 
-// ระบบเลือกอะไหล่คู่ผสม (เลือกชนิด หรือ พิมพ์ค้นหา)
+// โหลดรูปภาพทั้งหมดในระบบสำหรับหน้า "คลังรูปภาพ"
+async function loadGlobalGallery() {
+  try {
+    const res = await fetch('/api/repairs');
+    const data = await res.json();
+    const container = document.getElementById('globalGalleryContainer');
+    container.innerHTML = '';
+    
+    let allImages = [];
+    data.forEach(item => {
+      if (item.image_path) {
+        const paths = item.image_path.split(',');
+        paths.forEach(p => {
+          allImages.push({ repairId: item.id, billNo: item.bill_no, path: p.trim() });
+        });
+      }
+    });
+
+    if (allImages.length === 0) {
+      container.innerHTML = `<div class="col-span-full text-center text-gray-500 py-10">ยังไม่มีรูปภาพในระบบ</div>`;
+      return;
+    }
+
+    allImages.forEach((imgObj, idx) => {
+      container.innerHTML += `
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3 shadow-md flex flex-col items-center space-y-2">
+          <span class="text-[11px] font-bold text-cyan-400 bg-gray-900 px-2.5 py-0.5 rounded-full border border-gray-700">บิล: ${imgObj.billNo}</span>
+          <img src="${imgObj.path}" class="w-full h-36 object-contain rounded-xl bg-gray-900 border border-gray-700" alt="Gallery Image">
+          <div class="grid grid-cols-2 gap-1 w-full pt-1">
+            <a href="${imgObj.path}" download="repair-${imgObj.billNo}-${idx}.png" target="_blank" class="bg-cyan-600 hover:bg-cyan-500 text-white text-center py-1.5 rounded-xl text-xs font-bold shadow transition-all">📥 โหลด</a>
+            <button onclick="deleteRepairImage(${imgObj.repairId}, '${imgObj.path}')" class="bg-rose-600 hover:bg-rose-500 text-white py-1.5 rounded-xl text-xs font-bold shadow transition-all">🗑️ ลบรูป</button>
+          </div>
+        </div>
+      `;
+    });
+  } catch(e) {
+    console.error('Failed to load gallery', e);
+  }
+}
+
+// อัปโหลดรูปภาพตรงเข้าคลังรูปภาพ
+async function uploadGlobalImages(inputElem) {
+  if (inputElem.files.length === 0) return;
+  const formData = new FormData();
+  for (let i = 0; i < inputElem.files.length; i++) {
+    formData.append('repair_images', inputElem.files[i]);
+  }
+  // ส่งไปผูกกับบิลล่าสุดหรือสร้างบันทึกรูปเดี่ยว
+  formData.append('bill_no', 'GALLERY-' + Date.now());
+  formData.append('date', new Date().toISOString().split('T')[0]);
+  formData.append('customer_name', 'คลังรูปภาพทั่วไป');
+  formData.append('items', JSON.stringify([{name: 'อัปโหลดรูปภาพสะสม', qty: 1, price: 0}]));
+
+  const res = await fetch('/api/repairs', { method: 'POST', body: formData });
+  if (res.ok) {
+    alert('อัปโหลดรูปภาพสำเร็จ!');
+    inputElem.value = '';
+    loadGlobalGallery();
+    loadHistory();
+  }
+}
+
+// ฟังก์ชันลบรูปภาพเฉพาะรูปออกจากบิล
+async function deleteRepairImage(repairId, targetPath) {
+  if (!confirm('ต้องการลบรูปภาพนี้ออกจากระบบใช่หรือไม่?')) return;
+  const res = await fetch(`/api/repairs/${repairId}`);
+  const data = await res.json();
+  
+  let paths = data.image_path ? data.image_path.split(',') : [];
+  paths = paths.filter(p => p.trim() !== targetPath.trim());
+  
+  const updatedImagePath = paths.length > 0 ? paths.join(',') : null;
+
+  // อัปเดตข้อมูลกลับไปที่เซิร์ฟเวอร์
+  const formData = new FormData();
+  formData.append('bill_no', data.bill_no);
+  formData.append('date', data.date);
+  formData.append('customer_name', data.customer_name);
+  formData.append('customer_address', data.customer_address || '');
+  formData.append('repair_sender', data.repair_sender || '');
+  formData.append('amp_class', data.amp_class || '');
+  formData.append('amp_brand', data.amp_brand || '');
+  formData.append('amp_power', data.amp_power || '');
+  formData.append('symptom', data.symptom || '');
+  formData.append('status', data.status || '');
+  formData.append('existing_image_path', updatedImagePath || '');
+  
+  let items = data.items.map(i => ({ name: i.item_name, qty: i.quantity, price: i.unit_price }));
+  formData.append('items', JSON.stringify(items));
+
+  const updateRes = await fetch(`/api/repairs/${repairId}`, { method: 'PUT', body: formData });
+  if (updateRes.ok) {
+    alert('ลบรูปภาพสำเร็จ!');
+    loadGlobalGallery();
+    loadHistory();
+  }
+}
+
+// ฟังก์ชันลบข้อมูลบิลงานซ่อม
+async function deleteRepair(id) {
+  if (!confirm('⚠️ คำเตือน: คุณต้องการลบบิลงานซ่อมนี้ออกจากระบบใช่หรือไม่? ข้อมูลและรูปภาพทั้งหมดจะถูกลบถาวร')) return;
+  const res = await fetch(`/api/repairs/${id}`, { method: 'DELETE' });
+  if (res.ok) {
+    alert('ลบบิลงานซ่อมสำเร็จ!');
+    loadHistory();
+    loadDashboardStats();
+    loadGlobalGallery();
+  }
+}
+
 function addItemRow() {
   const tbody = document.getElementById('itemsTable');
   const tr = document.createElement('tr');
@@ -330,8 +438,13 @@ async function loadHistory() {
         <td class="p-3 border-b border-gray-800 font-bold text-gray-300">${item.repair_sender || '-'}<br><span class="${statusColor} text-xs font-semibold">${currentStatus}</span></td>
         <td class="p-3 border-b border-gray-800 text-right font-bold text-rose-400">${billTotal}</td>
         <td class="p-3 border-b border-gray-800 text-center">${imagesHTMLDesktop}</td>
-        <td class="p-3 border-b border-gray-800 text-center"><button onclick="togglePay(${item.id}, ${item.is_paid ? 0 : 1})" class="px-3 py-1 rounded-xl text-white text-xs font-bold ${item.is_paid ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-rose-600 hover:bg-rose-500'} shadow transition-all">${item.is_paid ? '✓ จ่ายแล้ว' : '✕ ค้างชำระ'}</button></td>
-        <td class="p-3 border-b border-gray-800 text-center"><button onclick="editRepair(${item.id})" class="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-gray-900 rounded-xl text-xs font-bold shadow transition-all">แก้ไขบิล</button></td>
+        <td class="p-3 border-b border-gray-800 text-center">
+          <div class="flex justify-center gap-1.5">
+            <button onclick="togglePay(${item.id}, ${item.is_paid ? 0 : 1})" class="px-2.5 py-1 rounded-xl text-white text-xs font-bold ${item.is_paid ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-rose-600 hover:bg-rose-500'} shadow transition-all">${item.is_paid ? '✓ จ่ายแล้ว' : '✕ ค้าง'}</button>
+            <button onclick="editRepair(${item.id})" class="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-gray-900 rounded-xl text-xs font-bold shadow transition-all">แก้ไข</button>
+            <button onclick="deleteRepair(${item.id})" class="px-2 py-1 bg-red-700 hover:bg-red-800 text-white rounded-xl text-xs font-bold shadow transition-all">ลบ</button>
+          </div>
+        </td>
       `;
       tbody.appendChild(tr);
 
@@ -356,14 +469,11 @@ async function loadHistory() {
           <span class="text-xs font-bold text-gray-300">ยอดเงินรวม:</span>
           <span class="font-bold text-rose-400 text-sm">${billTotal} ฿</span>
         </div>
-        <div class="grid grid-cols-3 gap-2 pt-1">
+        <div class="grid grid-cols-4 gap-1.5 pt-1">
           ${imagesHTMLMobile}
-          <button onclick="togglePay(${item.id}, ${item.is_paid ? 0 : 1})" class="py-1.5 rounded-xl text-white text-[11px] font-bold ${item.is_paid ? 'bg-emerald-600' : 'bg-rose-600'} shadow">
-            ${item.is_paid ? '✓ จ่ายแล้ว' : '✕ ค้างชำระ'}
-          </button>
-          <button onclick="editRepair(${item.id})" class="py-1.5 bg-amber-500 text-gray-900 rounded-xl text-[11px] font-bold shadow">
-            แก้ไขบิล
-          </button>
+          <button onclick="togglePay(${item.id}, ${item.is_paid ? 0 : 1})" class="py-1 rounded-xl text-white text-[10px] font-bold ${item.is_paid ? 'bg-emerald-600' : 'bg-rose-600'} shadow">${item.is_paid ? '✓ จ่าย' : '✕ ค้าง'}</button>
+          <button onclick="editRepair(${item.id})" class="py-1 bg-amber-500 text-gray-900 rounded-xl text-[10px] font-bold shadow">แก้ไข</button>
+          <button onclick="deleteRepair(${item.id})" class="py-1 bg-red-700 text-white rounded-xl text-[10px] font-bold shadow">ลบบิล</button>
         </div>
       `;
       cardsContainer.appendChild(card);
@@ -513,6 +623,7 @@ function closeBillPreview() {
   document.getElementById('billPreviewModal').style.display = 'none';
 }
 
+// ฟังก์ชันดาวน์โหลดภาพบิล (แก้ไขปรับปรุง Vertical Alignment ให้อยู่กึ่งกลางตารางเป๊ะๆ)
 function downloadBillImage() {
   const billArea = document.getElementById('billArea');
   const hideElements = billArea.querySelectorAll('.hide-on-print');
@@ -528,7 +639,7 @@ function downloadBillImage() {
     const span = document.createElement('div');
     span.innerText = val;
     span.style.display = 'flex';
-    span.style.alignItems = 'center';
+    span.style.alignItems = 'center'; // จัดกึ่งกลางแนวตั้ง (Vertical Center)
     span.style.minHeight = el.offsetHeight > 0 ? el.offsetHeight + 'px' : '28px';
     span.style.width = '100%';
     span.style.fontSize = '12px';

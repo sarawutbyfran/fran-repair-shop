@@ -10,7 +10,6 @@
     body { background-color: #0b0f19; color: #f3f4f6; }
     .print-border td, .print-border th { border-color: #22d3ee; border-width: 1px; border-style: solid; }
     .capturing-canvas { width: 800px !important; max-width: none !important; background: white !important; color: #000 !important; padding: 20px !important; }
-    /* ปรับแต่ง Scrollbar ให้เข้ากับธีมมืด */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #111827; }
     ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
@@ -33,61 +32,32 @@
       </div>
     </div>
 
-    <!-- เมนูบาร์หลัก (App Navigation Tabs) -->
-    <div class="bg-gray-900 p-2 rounded-xl shadow-lg flex gap-1.5 border border-gray-800">
-      <button onclick="switchTab('dashboardTab')" id="btn-dashboardTab" class="flex-1 py-2.5 px-1 rounded-lg font-bold text-xs md:text-sm bg-cyan-600 text-white shadow-md transition-all">📊 ภาพรวม</button>
-      <button onclick="switchTab('billTab')" id="btn-billTab" class="flex-1 py-2.5 px-1 rounded-lg font-bold text-xs md:text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all">📝 ทำบิล</button>
-      <button onclick="switchTab('historyTab')" id="btn-historyTab" class="flex-1 py-2.5 px-1 rounded-lg font-bold text-xs md:text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all">📋 ประวัติ</button>
-      <button onclick="switchTab('inventoryTab')" id="btn-inventoryTab" class="flex-1 py-2.5 px-1 rounded-lg font-bold text-xs md:text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all">⚙️ คลังอะไหล่</button>
+    <!-- เมนูบาร์หลัก (เพิ่มแท็บคลังรูปภาพ) -->
+    <div class="bg-gray-900 p-2 rounded-xl shadow-lg flex gap-1.5 border border-gray-800 overflow-x-auto">
+      <button onclick="switchTab('dashboardTab')" id="btn-dashboardTab" class="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-cyan-600 text-white shadow-md transition-all whitespace-nowrap">📊 ภาพรวม</button>
+      <button onclick="switchTab('billTab')" id="btn-billTab" class="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all whitespace-nowrap">📝 ทำบิล</button>
+      <button onclick="switchTab('historyTab')" id="btn-historyTab" class="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all whitespace-nowrap">📋 ประวัติ</button>
+      <button onclick="switchTab('galleryTab')" id="btn-galleryTab" class="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all whitespace-nowrap">📸 คลังรูปภาพ</button>
+      <button onclick="switchTab('inventoryTab')" id="btn-inventoryTab" class="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all whitespace-nowrap">⚙️ คลังอะไหล่</button>
     </div>
 
-    <!-- ================= 0. หน้า DASHBOARD ภาพรวม ================= -->
+    <!-- ================= 0. หน้า DASHBOARD ================= -->
     <div id="tab-dashboardTab" class="tab-content space-y-4">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="bg-gradient-to-br from-gray-900 to-gray-800 p-5 rounded-2xl border border-gray-800 shadow-xl relative overflow-hidden">
           <div class="absolute right-4 top-4 text-3xl opacity-20">💰</div>
           <p class="text-xs text-gray-400 font-bold uppercase tracking-wider">ยอดค้างชำระทั้งหมด</p>
           <h3 class="text-2xl md:text-3xl font-black text-rose-500 mt-2" id="dashTotalDebt">0.00 <span class="text-sm font-normal text-gray-400">บาท</span></h3>
-          <p class="text-[11px] text-gray-500 mt-1">จากบิลที่ยังไม่ได้เคลียร์ยอด</p>
         </div>
         <div class="bg-gradient-to-br from-gray-900 to-gray-800 p-5 rounded-2xl border border-gray-800 shadow-xl relative overflow-hidden">
           <div class="absolute right-4 top-4 text-3xl opacity-20">🔧</div>
           <p class="text-xs text-gray-400 font-bold uppercase tracking-wider">งานซ่อมทั้งหมดในระบบ</p>
           <h3 class="text-2xl md:text-3xl font-black text-cyan-400 mt-2" id="dashTotalJobs">0 <span class="text-sm font-normal text-gray-400">รายการ</span></h3>
-          <p class="text-[11px] text-gray-500 mt-1">งานกำลังซ่อม / รออะไหล่</p>
         </div>
         <div class="bg-gradient-to-br from-gray-900 to-gray-800 p-5 rounded-2xl border border-gray-800 shadow-xl relative overflow-hidden">
           <div class="absolute right-4 top-4 text-3xl opacity-20">📦</div>
           <p class="text-xs text-gray-400 font-bold uppercase tracking-wider">อะไหล่ในคลังทั้งหมด</p>
           <h3 class="text-2xl md:text-3xl font-black text-emerald-400 mt-2" id="dashTotalParts">0 <span class="text-sm font-normal text-gray-400">เบอร์/รายการ</span></h3>
-          <p class="text-[11px] text-gray-500 mt-1">พร้อมใช้งานเบิกออกบิล</p>
-        </div>
-      </div>
-
-      <!-- Quick Actions / Shortcuts -->
-      <div class="bg-gray-900 p-5 rounded-2xl border border-gray-800 shadow-xl space-y-3">
-        <h3 class="font-bold text-sm text-gray-300">⚡ ทางลัดเมนูด่วน</h3>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <button onclick="switchTab('billTab')" class="bg-gray-800 hover:bg-cyan-600 hover:text-white p-3 rounded-xl border border-gray-700 text-left transition-all group">
-            <div class="text-lg mb-1">📝</div>
-            <div class="font-bold text-xs">สร้างบิลใหม่</div>
-            <div class="text-[10px] text-gray-400 group-hover:text-cyan-200">ออกบิลเงินสดทันที</div>
-          </button>
-          <button onclick="switchTab('historyTab')" class="bg-gray-800 hover:bg-blue-600 hover:text-white p-3 rounded-xl border border-gray-700 text-left transition-all group">
-            <div class="text-lg mb-1">📋</div>
-            <div class="font-bold text-xs">เช็คสถานะซ่อม</div>
-            <div class="text-[10px] text-gray-400 group-hover:text-blue-200">ดูประวัติและยอดค้าง</div>
-          </button>
-          <button onclick="switchTab('inventoryTab')" class="bg-gray-800 hover:bg-orange-600 hover:text-white p-3 rounded-xl border border-gray-700 text-left transition-all group">
-            <div class="text-lg mb-1">⚙️</div>
-            <div class="font-bold text-xs">จัดการคลังอะไหล่</div>
-            <div class="text-[10px] text-gray-400 group-hover:text-orange-200">เพิ่ม/แก้ไขเบอร์อะไหล่</div>
-          </button>
-          <button onclick="loadDashboardStats()" class="bg-gray-800 hover:bg-emerald-600 hover:text-white p-3 rounded-xl border border-gray-700 text-left transition-all group">
-            <div class="text-lg mb-1">🔄</div>
-            <div class="font-bold text-xs">รีเฟรชข้อมูล</div>
-            <div class="text-[10px] text-gray-400 group-hover:text-emerald-200">อัปเดตสถิติล่าสุด</div>
-          </button>
         </div>
       </div>
     </div>
@@ -96,8 +66,6 @@
     <div id="tab-billTab" class="tab-content hidden">
       <form id="repairForm" class="bg-gray-900 p-4 md:p-6 rounded-2xl shadow-xl border border-gray-800 space-y-4">
         <input type="hidden" id="edit_repair_id" value="">
-        
-        <!-- ส่วนบิลกระดาษสีขาว (ตอนแคปเจอร์จะกลายเป็นสีขาวเพื่อความสะอาด) -->
         <div id="billArea" class="bg-white text-gray-900 p-4 md:p-6 border-2 border-cyan-500 rounded-xl relative pb-6 space-y-6 shadow-lg">
           
           <div class="flex justify-between items-center border-b-2 border-cyan-200 pb-4">
@@ -108,9 +76,9 @@
                 <p class="text-[10px] md:text-[11px] text-gray-600 mt-1">ที่อยู่ 3/10 หมู่ 5 ทุ่งบางกระแบล ต.นาป่า อ.เมือง จ.ชลบุรี 20000</p>
               </div>
             </div>
-            <!-- ป้ายบิลเงินสด กึ่งกลางสมบูรณ์แบบ -->
+            <!-- ป้ายบิลเงินสด จัดกึ่งกลางสมบูรณ์แบบทั้งแนวตั้งและแนวนอน -->
             <div class="bg-cyan-100 px-6 py-2 rounded-lg border-2 border-cyan-400 flex items-center justify-center min-w-[120px] h-[46px]">
-              <h2 class="text-lg md:text-xl font-bold text-cyan-900 tracking-wide leading-none">บิลเงินสด</h2>
+              <h2 class="text-lg md:text-xl font-bold text-cyan-900 tracking-wide leading-none m-0 p-0">บิลเงินสด</h2>
             </div>
           </div>
 
@@ -138,7 +106,6 @@
             </div>
           </div>
 
-          <!-- ข้อมูลงานซ่อม (หลังบ้าน) ซ่อนตอนพิมพ์ -->
           <div class="bg-amber-50 text-gray-900 p-3 rounded-lg border border-amber-200 text-xs space-y-2 hide-on-print mt-4">
             <div class="flex justify-between items-center border-b border-amber-200 pb-1">
               <h3 class="font-extrabold text-amber-900">⚙️ ข้อมูลงานซ่อม (ตั้งค่าบิลอัตโนมัติ)</h3>
@@ -154,7 +121,6 @@
             </div>
           </div>
 
-          <!-- ตารางรายการ -->
           <div class="mt-4">
             <table class="w-full text-sm print-border">
               <thead><tr class="bg-cyan-50 text-gray-900"><th class="p-1.5 w-10 text-center">ลำดับ</th><th class="p-1.5 text-center">รายการ (Descriptions)</th><th class="p-1.5 w-16 text-center">จำนวน</th><th class="p-1.5 w-20 text-center">หน่วยละ</th><th class="p-1.5 w-24 text-center">จำนวนเงิน</th><th class="p-1.5 w-8 text-center hide-on-print">ลบ</th></tr></thead>
@@ -182,7 +148,7 @@
       </form>
     </div>
 
-    <!-- ================= 2. หน้าประวัติงานซ่อม ================= -->
+    <!-- ================= 2. หน้าประวัติงานซ่อม (เพิ่มปุ่มลบบิล) ================= -->
     <div id="tab-historyTab" class="tab-content hidden">
       <div class="bg-gray-900 p-4 md:p-6 rounded-2xl shadow-xl border border-gray-800 space-y-4">
         <div class="flex flex-col md:flex-row justify-between items-center gap-3">
@@ -217,7 +183,25 @@
       </div>
     </div>
 
-    <!-- ================= 3. ระบบหลังบ้าน (คลังอะไหล่) ================= -->
+    <!-- ================= 3. คลังรูปภาพ (เพิ่มใหม่ตามคำขอ) ================= -->
+    <div id="tab-galleryTab" class="tab-content hidden">
+      <div class="bg-gray-900 p-4 md:p-6 rounded-2xl shadow-xl border border-gray-800 space-y-4">
+        <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+          <div>
+            <h2 class="text-xl font-bold text-purple-400">📸 คลังรูปภาพงานซ่อมทั้งหมด</h2>
+            <p class="text-xs text-gray-400 mt-1">อัปโหลด จัดการ ดาวน์โหลด หรือลบรูปภาพในระบบ</p>
+          </div>
+          <label class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl text-xs font-bold shadow cursor-pointer transition-all">
+            + อัปโหลดรูปภาพใหม่ <input type="file" id="globalGalleryUpload" accept="image/*" multiple class="hidden" onchange="uploadGlobalImages(this)">
+          </label>
+        </div>
+        <div id="globalGalleryContainer" class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+          <!-- รูปภาพทั้งหมดจะแสดงที่นี่ -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 4. ระบบหลังบ้าน (คลังอะไหล่) ================= -->
     <div id="tab-inventoryTab" class="tab-content hidden">
       <div class="bg-gray-900 p-4 md:p-6 rounded-2xl shadow-xl border border-gray-800 space-y-4">
         <h2 class="text-xl font-bold text-amber-400">⚙️ ระบบหลังบ้าน: จัดการคลังอะไหล่</h2>
@@ -293,13 +277,14 @@
     function switchTab(tabId) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
       document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-      ['dashboardTab', 'billTab', 'historyTab', 'inventoryTab'].forEach(id => {
+      ['dashboardTab', 'billTab', 'historyTab', 'galleryTab', 'inventoryTab'].forEach(id => {
         const btn = document.getElementById(`btn-${id}`);
         if (id === tabId) {
-          btn.className = "flex-1 py-2.5 px-1 rounded-lg font-bold text-xs md:text-sm bg-cyan-600 text-white shadow-md transition-all";
+          btn.className = "flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-cyan-600 text-white shadow-md transition-all whitespace-nowrap";
           if(id === 'dashboardTab') loadDashboardStats();
+          if(id === 'galleryTab') loadGlobalGallery();
         } else {
-          btn.className = "flex-1 py-2.5 px-1 rounded-lg font-bold text-xs md:text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all";
+          btn.className = "flex-1 py-2.5 px-2 rounded-lg font-bold text-xs md:text-sm bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-all whitespace-nowrap";
         }
       });
       window.scrollTo(0, 0);
